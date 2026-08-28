@@ -1,18 +1,453 @@
+---
+layout: null
+title: 黒板・ホワイトボード写真の傾き補正ツール
+description: 斜めから撮った黒板・ホワイトボードの写真を、正面から撮ったような長方形に補正します。元写真の高解像度を保ったまま保存でき、画像は外部に送信されません。
+lang: ja
+---
+
 <!doctype html>
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#1f4d3d" />
     <meta
-      name="description"
-      content="斜めに撮った黒板・ホワイトボードの写真を、正面から撮ったように補正します。画像は端末内だけで処理され、外部へ送信されません。"
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-    <title>黒板補正さん — 斜めに撮った黒板を、まっすぐに。</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='18' fill='%231f4d3d'/><rect x='18' y='28' width='64' height='44' rx='3' fill='%23f2efe6'/></svg>" />
+    <meta name="theme-color" content="#f8f6f2" />
+
+    <title>黒板補正さん | {{ page.title }}</title>
+    <meta name="description" content="{{ page.description }}" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="{{ site.url }}{{ site.baseurl }}/" />
+
+    <link rel="icon" href="favicon.png" type="image/png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="黒板補正さん | {{ page.title }}" />
+    <meta property="og:description" content="{{ page.description }}" />
+    <meta property="og:url" content="{{ site.url }}{{ site.baseurl }}/" />
+    <meta
+      property="og:image"
+      content="{{ site.url }}{{ site.baseurl }}/favicon.png"
+    />
+    <meta property="og:locale" content="ja_JP" />
+    <meta name="twitter:card" content="summary" />
+
+    <style>
+      /* ===== 共通デザイントークン（事務ツール5種で統一） ===== */
+      :root {
+        --bg: #f8f6f2;
+        --surface: #fff;
+        --border: #e0e0e0;
+        --text: #0f0f0f;
+        --text-sub: #757575;
+        --accent: #f28c06;
+        --accent-dark: #d97a00;
+        --accent-soft: #fff8f0;
+        --danger: #e53935;
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      /* Typography & Visual Theme */
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          "Hiragino Kaku Gothic ProN",
+          "Noto Sans JP",
+          Meiryo,
+          Roboto,
+          sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+        letter-spacing: -0.4px;
+        font-feature-settings: "liga";
+        word-break: break-all;
+        overflow-wrap: break-word;
+        line-break: strict;
+
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        padding: 16px calc(16px + env(safe-area-inset-right, 0px))
+          calc(16px + env(safe-area-inset-bottom, 0px))
+          calc(16px + env(safe-area-inset-left, 0px));
+        box-sizing: border-box;
+      }
+
+      /* Card Component
+           他ツールは max-width 450px だが、本ツールは数値や短文ではなく
+           写真そのものを表示・操作するため 560px まで広げている。 */
+      .container {
+        background-color: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        width: 100%;
+        max-width: 560px;
+        text-align: center;
+        box-sizing: border-box;
+      }
+
+      /* Headings */
+      h1 {
+        margin-top: 0;
+        margin-bottom: 8px;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .subtitle {
+        font-size: 12px;
+        color: var(--text-sub);
+        display: block;
+        margin-bottom: 24px;
+      }
+      .instruction {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text);
+        margin-bottom: 8px;
+        text-align: left;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-block;
+        border: 1px solid var(--border);
+        background-color: var(--surface);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 8px 24px;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: inherit;
+        letter-spacing: -0.4px;
+        cursor: pointer;
+        min-height: 44px;
+        transition:
+          background-color 0.2s,
+          border-color 0.2s;
+      }
+      .btn:hover {
+        background-color: #f5f5f5;
+      }
+      .btn-primary {
+        background-color: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background-color: var(--accent-dark);
+        border-color: var(--accent-dark);
+      }
+      .btn-primary:disabled {
+        opacity: 0.55;
+        cursor: default;
+        pointer-events: none;
+      }
+      .btn-cta {
+        width: 100%;
+        font-size: 16px;
+        padding: 16px 24px;
+        min-height: 56px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      .actions .btn {
+        flex: 1 1 140px;
+      }
+
+      /* 写真の表示・編集領域。aspect-ratio は画像に合わせて JS が指定する。 */
+      .stage {
+        position: relative;
+        background-color: #f0ede7;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        touch-action: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .stage canvas,
+      .stage img {
+        max-width: 100%;
+        max-height: 100%;
+        display: block;
+      }
+
+      /* 進行中表示 */
+      .busy {
+        position: absolute;
+        inset: 0;
+        z-index: 5;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background-color: rgba(248, 246, 242, 0.88);
+        font-size: 13px;
+        color: var(--text-sub);
+      }
+      .spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* メッセージ */
+      .note {
+        font-size: 13px;
+        color: var(--text-sub);
+        text-align: left;
+        margin: 12px 0 0;
+      }
+      .note-warn {
+        background-color: var(--accent-soft);
+        border: 1px solid #ffd9a8;
+        border-radius: 8px;
+        padding: 12px;
+        color: var(--text);
+      }
+      .error-msg {
+        font-size: 13px;
+        color: var(--danger);
+        text-align: left;
+        margin: 12px 0 0;
+      }
+      .error-msg:empty {
+        margin: 0;
+      }
+
+      /* 補正結果のサイズ表示 */
+      .meta {
+        font-size: 12px;
+        color: var(--text-sub);
+        text-align: left;
+        margin: 12px 0 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .meta strong {
+        color: var(--accent);
+        font-size: 13px;
+      }
+
+      /* 保存形式の選択 */
+      .formats {
+        display: flex;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      .formats label {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 44px;
+        background-color: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 8px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .formats input {
+        accent-color: var(--accent);
+        margin: 0;
+      }
+      .formats label:has(input:checked) {
+        border-color: var(--accent);
+        background-color: var(--accent-soft);
+        font-weight: 600;
+      }
+
+      /* プライバシー表示 */
+      .privacy {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+        margin: 16px 0 0;
+        padding: 12px;
+        background-color: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 12px;
+        color: var(--text-sub);
+        text-align: left;
+      }
+      .privacy svg {
+        flex: none;
+        width: 14px;
+        height: 14px;
+        margin-top: 2px;
+        color: var(--accent);
+      }
+
+      /* Footer */
+      footer {
+        margin-top: 32px;
+        font-size: 12px;
+        color: var(--text-sub);
+        text-align: center;
+      }
+      footer a {
+        color: var(--text-sub);
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "黒板補正さん",
+        "description": "斜めから撮った黒板・ホワイトボードの写真を、高解像度のまま正面から見た長方形に補正するツール。",
+        "applicationCategory": "UtilitiesApplication",
+        "inLanguage": "ja",
+        "isAccessibleForFree": true
+      }
+    </script>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <div class="container">
+      <h1>黒板補正さん</h1>
+      <span class="subtitle"
+        >斜めに撮った黒板を、まっすぐに。<br />黒板・ホワイトボードの写真を、正面から撮ったように補正します。元写真の高解像度を生かしたまま保存できます。</span
+      >
+
+      <!-- 1. 写真を選ぶ -->
+      <section id="screenStart">
+        <button type="button" class="btn btn-primary btn-cta" id="pickBtn">
+          黒板の写真を選ぶ
+        </button>
+        <input
+          type="file"
+          id="fileInput"
+          accept="image/jpeg,image/png,image/webp,image/*"
+          hidden
+        />
+        <p
+          class="error-msg"
+          id="startError"
+          role="alert"
+          aria-live="polite"
+        ></p>
+      </section>
+
+      <!-- 2. 四隅を合わせる -->
+      <section id="screenEdit" hidden>
+        <div class="instruction">黒板の四隅に合わせる</div>
+        <div class="stage" id="editStage"></div>
+        <p class="note" id="editHint"></p>
+        <p class="error-msg" id="editError" role="alert" aria-live="polite"></p>
+        <div class="actions">
+          <button type="button" class="btn" id="backBtn">写真を選び直す</button>
+          <button type="button" class="btn" id="resetBtn">
+            四隅をリセット
+          </button>
+          <button type="button" class="btn btn-primary" id="applyBtn">
+            補正する
+          </button>
+        </div>
+      </section>
+
+      <!-- 3. 保存する -->
+      <section id="screenResult" hidden>
+        <div class="instruction">補正しました</div>
+        <div class="stage" id="resultStage"></div>
+        <p class="meta" id="resultMeta"></p>
+        <div class="formats">
+          <label
+            ><input
+              type="radio"
+              name="format"
+              value="jpeg"
+              checked
+            />JPEG（高品質）</label
+          >
+          <label
+            ><input
+              type="radio"
+              name="format"
+              value="png"
+            />PNG（無劣化）</label
+          >
+        </div>
+        <div class="actions">
+          <button type="button" class="btn" id="readjustBtn">
+            四隅を再調整
+          </button>
+          <button type="button" class="btn" id="restartBtn">
+            最初からやり直す
+          </button>
+          <button type="button" class="btn btn-primary" id="saveBtn">
+            保存する
+          </button>
+        </div>
+        <p class="note" id="saveStatus"></p>
+      </section>
+
+      <p class="privacy">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>画像は外部へ送信されません。すべて端末内で処理されます。</span>
+      </p>
+
+      <noscript>
+        <p class="error-msg">
+          このツールは JavaScript を使用します。ブラウザの設定で JavaScript
+          を有効にしてください。
+        </p>
+      </noscript>
+    </div>
+
+    <footer>&copy; 2026 ISHIKAWA, Natsuki | MIT License</footer>
+
+    <script type="module" src="js/app.js"></script>
   </body>
 </html>

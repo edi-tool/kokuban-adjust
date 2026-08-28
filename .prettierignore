@@ -1,0 +1,5 @@
+# Google Search Console の検証ファイル。他ツールと byte 単位で揃える。
+googled180bd734463e748.html
+
+# ベンダリングした scanic のビルド済みファイル。整形しない。
+lib/

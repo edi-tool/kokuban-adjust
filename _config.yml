@@ -1,0 +1,10 @@
+url: "https://edi-tool.github.io"
+baseurl: "/kokuban-adjust"
+
+plugins:
+  - jekyll-sitemap
+show_downloads: false
+google_analytics: edi-tool
+show_edit_on_github: false
+
+# 検証用の開発ページ。公開はするが検索には載せない（lab.html 側で noindex 指定）。

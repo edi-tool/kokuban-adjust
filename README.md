@@ -1,120 +1,121 @@
-# 黒板補正さん
+# 黒板・ホワイトボード写真の傾き補正ツール
 
-**斜めに撮った黒板を、まっすぐに。**
+斜めから撮った黒板・ホワイトボードの写真を、正面から撮ったような長方形に補正するツールです。
 
-黒板・ホワイトボードの写真を、正面から撮ったように補正する静的 Web ツールです。
+https://edi-tool.github.io/kokuban-adjust/
+
+## 概要
+
+授業中・授業後にスマートフォンで斜めから撮った黒板やホワイトボードの写真を、
+台形のゆがみを取り除いて正面から見た長方形に補正します。
 元写真の高解像度を生かしたまま保存できます。
 
-> 画像は外部へ送信されません。すべて端末内で処理されます。
+処理はすべてブラウザ内で完結し、**画像は外部へ送信されません**。
+児童生徒や氏名、授業内容が写り込んでいても、端末の外に出ることはありません。
 
 ## 使い方
 
 1. 黒板の写真を選ぶ
-2. 四隅を確認する（自動検出。ずれていれば指でドラッグして調整）
+2. 四隅を確認する（自動検出されます。ずれていれば指でドラッグして調整）
 3. 「補正する」
 4. JPEG（高品質）または PNG（無劣化）で保存
 
-## 設計方針
+## 使用技術
 
-### 高解像度の維持
+- **Frontend**: HTML5, CSS3
+- **Scripting**: Vanilla JavaScript (ES Modules / ビルド工程なし)
+- **画像処理**: [scanic](https://github.com/marquaye/scanic) v1.6.0 (MIT)
 
-検出は縮小画像（最大辺 1024px）で行いますが、**透視補正は必ず原寸画像に対して**
-実行します。検出された四隅は原寸画像の座標系へ復元されるため、出力解像度は
-検出処理の解像度に影響されません。
+## 仕様について
+
+### 1. 高解像度の維持
+
+単に長方形へ変形できればよいのではなく、元写真の解像度を保つことを最重要要件と
+しています。四隅の自動検出は縮小画像（最大辺 1024px）で行いますが、
+**透視補正は必ず原寸画像に対して**実行します。検出された四隅は原寸画像の
+座標系へ復元されるため、出力解像度は検出処理の解像度に影響されません。
 
 ```
-元画像 (4032x3024)
-  ├→ 検出用コピーのみ縮小 (1024px) → 四隅検出 → 原寸座標へ復元
-  └→ 原寸画像に Perspective Transform → 高解像度画像を書き出し
+元画像 (4032 × 3024)
+  ├─ 検出用コピーのみ縮小 (1024px) → 四隅検出 → 原寸座標へ復元
+  └─ 原寸画像に Perspective Transform → 高解像度画像を書き出し
 ```
 
-実測（Chromium, 合成 12MP 画像）:
+実測（Chromium、合成の 12MP 画像）:
 
-| 入力 | 検出 | 補正 | 出力 |
-|---|---|---|---|
-| 4032 × 3024 (12.2MP) | 500ms | 1.7s | 3557 × 2208 (7.9MP) |
-| 3024 × 4032 (12.2MP, 縦) | 286ms | 646ms | 2457 × 2688 (6.6MP) |
+| 入力              | 検出  | 補正  | 出力        |
+| ----------------- | ----- | ----- | ----------- |
+| 4032 × 3024       | 372ms | 511ms | 3557 × 2208 |
+| 3024 × 4032（縦） | 278ms | 461ms | 2457 × 2688 |
 
 出力が入力より小さいのは、黒板が写真の一部を占めるためです。四隅の実ピクセル
 距離がそのまま出力サイズになるので、不要な縮小は発生していません。
 
-### メモリ上限
+透視変換では画素の補間が発生するため、厳密な無劣化ではありません。
+不要な縮小・再圧縮をしない、という方針です。JPEG は品質 0.92 固定、
+PNG は無劣化で書き出します。
 
-透視補正 1 回につき原寸の RGBA バッファが複数同時に確保されるため、
-スマートフォンでのクラッシュを避ける上限を設けています。値と理由は
-`src/imageLoader.ts` の `MAX_INPUT_PIXELS` / `MAX_OUTPUT_PIXELS` に
-コメントとして明記しています。通常のスマートフォン写真（12MP 前後）では
-どちらの上限にも達しないため、縮小は一切発生しません。
+### 2. メモリの上限
 
-連続処理でメモリが増え続けないことは確認済みです（12MP を 6 回連続処理して
-JS heap 93.6MB で横ばい）。
+透視補正 1 回につき、原寸の RGBA バッファが複数同時に確保されます。
+スマートフォンでのクラッシュを避けるため上限を設けています。値と理由は
+`js/image-loader.js` の `MAX_INPUT_PIXELS`（40MP）と
+`js/scanner-adapter.js` の `MAX_OUTPUT_PIXELS`（16.7MP、iOS Safari の
+canvas 面積上限）にコメントとして明記しています。
 
-### 自動検出を前提にしない
+一般的なスマートフォン写真（12MP 前後）ではどちらの上限にも達しないため、
+縮小は一切発生しません。上限に達した場合は、何 px から縮小したかを画面に表示します。
 
-黒板は「壁との色差が小さい」「角が画面外」「掲示物が多い」など自動検出が
-難しいケースが多くあります。そのため:
+### 3. 自動検出を前提にしない
 
-- 検出の確度が低い場合・形状が黒板としてありえない場合は、検出失敗として扱う
-- 検出に失敗しても、画像の少し内側に初期四隅を置いて手動調整へ倒す
+黒板は「壁との色差が小さい」「角が画面外にある」「掲示物が多い」など、
+自動検出が難しい条件が揃いやすい被写体です。そのため:
+
+- 確度が低い場合や、黒板としてありえない形の場合は検出失敗として扱う
+- 検出に失敗しても、画像の少し内側に初期四隅を置いて手動調整へ移る
 - 手動 4 点指定は非常用機能ではなく、主要機能として扱う
 
-判定条件は `src/scanner/scannerAdapter.ts` の `isPlausibleBoard()` にあります。
+判定条件は `js/scanner-adapter.js` の `isPlausibleBoard()` にあります。
 
-## 採用技術
+### 4. 対応画像形式
 
-- **[scanic](https://github.com/marquaye/scanic) v1.6 (MIT)** — 四隅検出、
-  透視変換、Corner Editor（タッチ操作・拡大ルーペ込み）
-- **Vite + TypeScript（バニラ、フレームワークなし）**
+JPEG / PNG / WebP に対応しています。EXIF Orientation は
+`createImageBitmap` の `imageOrientation: 'from-image'` で適用します。
 
-Canny / findContours / polygon approximation / perspective transform /
-corner editor / touch drag / magnifier は、いずれも scanic の実装を使っています。
-自作していません。
-
-### 採用しなかったもの
-
-- **jscanify** — OpenCV.js に依存し、`node_modules` で約 30MB。
-  学校の回線でスマートフォンから開く用途には重すぎます。Corner Editor と
-  ルーペも自前実装が必要になります。検出比較のため、ラボページからのみ
-  CDN 経由で読み込めます。
-- **Nitidoc** — AGPL-3.0 のため、MIT である本プロジェクトへコードは
-  流用していません。UX とアーキテクチャの参考のみ。
-- **OpenCV.js の直接利用** — scanic で足りているため不要。
-
-### ライブラリ依存の隔離
-
-アプリ本体は `src/scanner/scannerAdapter.ts` の関数（`detectBoard`,
-`correctPerspective`, `createCornerEditorAdapter` など）だけを呼びます。
-scanic の API はこのファイルの外に出ません。差し替える場合の変更範囲は
-このファイルに閉じます。
-
-## 対応画像形式
-
-JPEG / PNG / WebP。EXIF Orientation は
-`createImageBitmap(file, { imageOrientation: 'from-image' })` で適用します
-（EXIF パーサは自作していません）。
-
-HEIC / HEIF は Safari 以外でデコードできず、対応には数 MB の wasm デコーダが
-必要になるため、初版では非対応とし、案内を表示します。
+HEIC / HEIF は Safari 以外のブラウザでデコードできず、対応には数 MB の
+wasm デコーダが必要になるため、初版では非対応とし、案内を表示します。
+iPhone では「設定 → カメラ → フォーマット」を「互換性優先」にすると
+JPEG で撮影できます。
 
 ## 開発
 
 ```bash
-npm install
-npm run dev      # http://localhost:5173/
-npm run build    # tsc --noEmit + vite build → dist/
+python -m http.server 8000   # プレビュー
+npx prettier --write .       # 整形
 ```
 
-### 検出比較ラボ
+ビルド工程はありません。`index.html` をそのまま GitHub Pages が配信します。
 
-`/dev/lab.html` で、同じ写真に対して Scanic classical / Scanic ML /
-jscanify を並べて比較できます（写真は端末内でのみ処理されます）。
+`lab.html` で、同じ写真に対して Scanic classical / Scanic ML / jscanify を
+並べて比較できます（開発用、検索対象外）。
 
-## 公開
+## 参考文献 / References
 
-`main` への push で GitHub Actions が `dist/` を GitHub Pages へ配置します
-(`.github/workflows/deploy.yml`)。バックエンド・データベース・外部画像処理 API は
-一切使用していません。
+### 画像処理
 
-## ライセンス
+- [marquaye/scanic](https://github.com/marquaye/scanic) (MIT)
+  - 四隅検出、透視変換、Corner Editor（タッチ操作・拡大ルーペ）に使用
+  - ライセンス全文は `lib/LICENSE.scanic`
+- [puffinsoft/jscanify](https://github.com/puffinsoft/jscanify) (MIT)
+  - 検出精度の比較対象（`lab.html` からのみ利用）
+- [santiagoisra/nitidoc](https://github.com/santiagoisra/nitidoc) (AGPL-3.0)
+  - スマートフォン UX と非破壊編集の設計を参考にしたのみ。コードは流用していません
 
-MIT
+### デザイン
+
+- [kzhrknt/awesome-design-md-jp](https://github.com/kzhrknt/awesome-design-md-jp)
+  - 本ツールのデザインの参考
+
+---
+
+© 2026 ISHIKAWA, Natsuki
