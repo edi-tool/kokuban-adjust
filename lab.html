@@ -1,0 +1,175 @@
+---
+layout: null
+title: 検出比較ラボ（開発用）
+sitemap: false
+---
+
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>検出比較ラボ | 黒板補正さん</title>
+    <link rel="icon" href="favicon.png" type="image/png" />
+    <style>
+      :root {
+        --bg: #f8f6f2;
+        --surface: #fff;
+        --border: #e0e0e0;
+        --text: #0f0f0f;
+        --text-sub: #757575;
+        --accent: #f28c06;
+        --danger: #e53935;
+      }
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          "Hiragino Kaku Gothic ProN",
+          "Noto Sans JP",
+          Meiryo,
+          Roboto,
+          sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+        letter-spacing: -0.4px;
+        font-feature-settings: "liga";
+        margin: 0;
+        padding: 24px 16px 60px;
+      }
+      main {
+        max-width: 1080px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 18px;
+        font-weight: 600;
+        margin: 0 0 8px;
+      }
+      .lead {
+        font-size: 13px;
+        color: var(--text-sub);
+        margin: 0 0 24px;
+      }
+      .panel {
+        background-color: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      }
+      .panel label {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 13px;
+        margin-top: 8px;
+      }
+      .status {
+        font-size: 13px;
+        color: var(--text-sub);
+        min-height: 1.5em;
+        margin: 16px 0 0;
+      }
+      .block {
+        background-color: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px;
+        margin-top: 16px;
+      }
+      .block h2 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0 0 4px;
+      }
+      .block .sub {
+        font-size: 12px;
+        color: var(--text-sub);
+        margin: 0 0 16px;
+        font-variant-numeric: tabular-nums;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 16px;
+      }
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+      }
+      .card h3 {
+        font-size: 13px;
+        font-weight: 600;
+        margin: 0 0 8px;
+      }
+      .card canvas {
+        width: 100%;
+        height: auto;
+        display: block;
+        background-color: #f0ede7;
+        border-radius: 4px;
+      }
+      .card dl {
+        margin: 12px 0 0;
+        font-size: 12px;
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      .card dt {
+        color: var(--text-sub);
+      }
+      .card dd {
+        margin: 0;
+      }
+      .ok {
+        color: #43a047;
+        font-weight: 600;
+      }
+      .ng {
+        color: var(--danger);
+        font-weight: 600;
+      }
+      footer {
+        margin-top: 32px;
+        font-size: 12px;
+        color: var(--text-sub);
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>検出比較ラボ</h1>
+      <p class="lead">
+        黒板・ホワイトボードの写真で検出エンジンを並べて比較する開発用ページです。
+        画像は端末内でのみ処理されます。
+      </p>
+
+      <div class="panel">
+        <input type="file" id="fileInput" accept="image/*" multiple />
+        <label
+          ><input type="checkbox" id="useMl" checked /> Scanic ML detector
+          も試す（初回のみ CDN からモデル約 2MB を取得）</label
+        >
+        <label
+          ><input type="checkbox" id="useJscanify" /> jscanify も試す（OpenCV.js
+          を CDN から約 9MB 取得）</label
+        >
+      </div>
+
+      <p class="status" id="status"></p>
+      <div id="results"></div>
+    </main>
+
+    <footer>&copy; 2026 ISHIKAWA, Natsuki | MIT License</footer>
+
+    <script type="module" src="js/lab.js"></script>
+  </body>
+</html>
