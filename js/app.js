@@ -41,6 +41,9 @@ const screens = {
 const state = {
   source: null, // { canvas, width, height, fileName }
   corners: null,
+  // 自動検出が成功したか。編集画面の案内文の出し分けに使う。
+  // 手動指定で確定した後の「再調整」では自動検出扱いにしないよう保持する。
+  detected: false,
   result: null, // { canvas, width, height, limited }
   editor: null,
 };
@@ -114,7 +117,8 @@ el("fileInput").addEventListener("change", async (event) => {
 
     const detection = await detectBoard(state.source.canvas);
     state.corners = detection.corners;
-    openEditor(detection.success);
+    state.detected = detection.success;
+    openEditor(state.detected);
   } catch (err) {
     error.textContent =
       err instanceof UnsupportedImageError
@@ -215,7 +219,8 @@ function showResult() {
 
 el("readjustBtn").addEventListener("click", () => {
   // 元画像と四隅は保持したまま編集へ戻る（非破壊）。
-  openEditor(true);
+  // 案内文は元の検出結果（自動 / 手動）をそのまま踏襲する。
+  openEditor(state.detected);
 });
 
 el("restartBtn").addEventListener("click", () => {
