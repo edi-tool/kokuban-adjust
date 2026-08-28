@@ -96,6 +96,18 @@ npx prettier --write .       # 整形
 
 ビルド工程はありません。`index.html` をそのまま GitHub Pages が配信します。
 
+### GitHub Pages の有効化（初回のみ・手動）
+
+新規リポジトリでは GitHub Pages は自動で有効になりません。公開前に、
+リポジトリの **Settings → Pages** で以下を設定してください（管理者権限が必要）。
+
+- Build and deployment → Source: **Deploy from a branch**
+- Branch: **main** / **/(root)**
+
+保存すると Jekyll のビルドが走り、数分で https://edi-tool.github.io/kokuban-adjust/
+が閲覧できるようになります。有効化されているかは、Actions タブに
+`pages build and deployment`（`page_build` イベント）の実行履歴があるかで確認できます。
+
 `lab.html` で、同じ写真に対して Scanic classical / Scanic ML / jscanify を
 並べて比較できます（開発用、検索対象外）。
 
