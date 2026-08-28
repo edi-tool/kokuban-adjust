@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>検出比較ラボ — 黒板補正さん</title>
+  </head>
+  <body>
+    <main>
+      <h1>検出比較ラボ</h1>
+      <p class="lead">
+        黒板・ホワイトボードの写真で、検出エンジンを並べて比較します。
+        画像は端末内でのみ処理されます。開発用ページです。
+      </p>
+
+      <div class="controls">
+        <input type="file" id="file" accept="image/*" multiple />
+        <label><input type="checkbox" id="useMl" checked /> Scanic ML detector も試す</label>
+        <label><input type="checkbox" id="useJscanify" /> jscanify も試す（OpenCV.js を CDN から約 9MB 取得）</label>
+      </div>
+
+      <p id="status" class="status"></p>
+      <div id="results"></div>
+    </main>
+    <script type="module" src="./lab.ts"></script>
+  </body>
+</html>

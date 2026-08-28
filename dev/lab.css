@@ -1,0 +1,27 @@
+body {
+  font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  margin: 0;
+  background: #f7f5ef;
+  color: #1b201e;
+}
+main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+h1 { font-size: 1.4rem; margin: 0 0 6px; }
+.lead { color: #5f6b66; font-size: .9rem; margin: 0 0 18px; line-height: 1.7; }
+.controls {
+  display: flex; flex-direction: column; gap: 10px;
+  background: #fff; border: 1px solid #dcd8cc; border-radius: 12px; padding: 16px;
+}
+.controls label { font-size: .9rem; display: flex; gap: 8px; align-items: center; }
+.status { font-size: .88rem; color: #5f6b66; min-height: 1.5em; }
+.imgblock { background: #fff; border: 1px solid #dcd8cc; border-radius: 12px; padding: 16px; margin-top: 18px; }
+.imgblock h2 { font-size: 1rem; margin: 0 0 4px; word-break: break-all; }
+.imgblock .sub { font-size: .8rem; color: #5f6b66; margin: 0 0 12px; font-variant-numeric: tabular-nums; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.card { border: 1px solid #e6e2d8; border-radius: 10px; padding: 10px; }
+.card h3 { font-size: .9rem; margin: 0 0 8px; }
+.card canvas { width: 100%; height: auto; display: block; background: #121715; border-radius: 6px; }
+.card dl { margin: 10px 0 0; font-size: .78rem; display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-variant-numeric: tabular-nums; }
+.card dt { color: #5f6b66; }
+.card dd { margin: 0; }
+.ok { color: #1f7a52; font-weight: 700; }
+.ng { color: #a12b2b; font-weight: 700; }
