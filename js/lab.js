@@ -6,7 +6,11 @@
  */
 
 import { loadImageFile } from "./image-loader.js";
-import { correctPerspective, predictOutputSize } from "./scanner-adapter.js";
+import {
+  correctPerspective,
+  predictOutputSize,
+  DETECT_MAX_DIMENSION,
+} from "./scanner-adapter.js";
 import { scanDocument } from "../lib/scanic.js";
 
 const el = (id) => document.getElementById(id);
@@ -73,7 +77,7 @@ async function runScanic(canvas, detector) {
     const res = await scanDocument(canvas, {
       mode: "detect",
       detector,
-      maxProcessingDimension: 1024,
+      maxProcessingDimension: DETECT_MAX_DIMENSION,
     });
     const detectMs = performance.now() - startedAt;
     if (!res.success || !res.corners) {
@@ -134,7 +138,10 @@ async function runJscanify(canvas) {
   try {
     const scanner = await loadJscanify();
     // 検出条件を Scanic と揃えるため、同じ最大辺まで縮小してから渡す。
-    const scale = Math.min(1, 1024 / Math.max(canvas.width, canvas.height));
+    const scale = Math.min(
+      1,
+      DETECT_MAX_DIMENSION / Math.max(canvas.width, canvas.height),
+    );
     const small = document.createElement("canvas");
     small.width = Math.round(canvas.width * scale);
     small.height = Math.round(canvas.height * scale);

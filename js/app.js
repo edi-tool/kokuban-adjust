@@ -44,7 +44,8 @@ const state = {
   // 自動検出が成功したか。編集画面の案内文の出し分けに使う。
   // 手動指定で確定した後の「再調整」では自動検出扱いにしないよう保持する。
   detected: false,
-  result: null, // { canvas, width, height, limited }
+  result: null, // { canvas, width, height, limited } 透視補正そのままの結果（不変）
+  output: null, // 表示・保存に使う canvas。縦横比指定がなければ result.canvas と同一。
   editor: null,
 };
 
@@ -61,13 +62,22 @@ function destroyEditor() {
   }
 }
 
+/** state.output が state.result.canvas と別物なら解放する（縦横比変更で作った canvas）。 */
+function releaseOutputIfDistinct() {
+  if (state.output && state.output !== state.result?.canvas) {
+    releaseCanvas(state.output);
+  }
+}
+
 /** 元画像・補正結果を破棄する。連続処理でメモリが増え続けないようにする。 */
 function releaseAll() {
   destroyEditor();
   if (state.source) releaseCanvas(state.source.canvas);
+  releaseOutputIfDistinct();
   releaseCanvas(state.result?.canvas);
   state.source = null;
   state.result = null;
+  state.output = null;
   state.corners = null;
 }
 
@@ -203,6 +213,7 @@ el("applyBtn").addEventListener("click", async () => {
   await nextFrame();
 
   try {
+    releaseOutputIfDistinct();
     releaseCanvas(state.result?.canvas);
     state.result = await correctPerspective(state.source.canvas, state.corners);
     showResult();
@@ -216,26 +227,88 @@ el("applyBtn").addEventListener("click", async () => {
 
 /* ----------------------------------------------------------------- result */
 
-function showResult() {
-  const { canvas, width, height, limited } = state.result;
+/**
+ * 透視補正の出力サイズは四隅の対辺長（scanner-adapter.js の predictOutputSize
+ * と同じ式）から決まり、実際の黒板の縦横比とは一致しない。強い斜め撮影ほど
+ * ずれる（progress.md 参照）。ここでは補正結果 canvas はそのまま保持し、
+ * 指定された縦横比に引き伸ばした「表示・保存用」の別 canvas を都度作る。
+ * 面積（総ピクセル数）は保つので、指定してもしなくても解像度は変わらない。
+ */
+function stretchToRatio(sourceCanvas, ratioW, ratioH) {
+  const area = sourceCanvas.width * sourceCanvas.height;
+  const ratio = ratioW / ratioH;
+  const width = Math.max(1, Math.round(Math.sqrt(area * ratio)));
+  const height = Math.max(1, Math.round(Math.sqrt(area / ratio)));
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(sourceCanvas, 0, 0, width, height);
+  return canvas;
+}
+
+/** 縦横比 UI の現在値を { w, h } で返す。「自動」または未入力なら null。 */
+function selectedRatio() {
+  const mode = el("aspectSelect").value;
+  if (mode === "auto") return null;
+  if (mode === "custom") {
+    const w = parseFloat(el("aspectW").value);
+    const h = parseFloat(el("aspectH").value);
+    return w > 0 && h > 0 ? { w, h } : null;
+  }
+  const [w, h] = mode.split(":").map(Number);
+  return { w, h };
+}
+
+/** 縦横比 UI の選択に合わせて state.output を作り直し、結果画面を再描画する。 */
+function applyAspectSelection() {
+  const ratio = selectedRatio();
+  const nextOutput = ratio
+    ? stretchToRatio(state.result.canvas, ratio.w, ratio.h)
+    : state.result.canvas;
+
+  releaseOutputIfDistinct();
+  state.output = nextOutput;
+  renderResultStage();
+}
+
+function renderResultStage() {
+  const canvas = state.output;
   const stage = el("resultStage");
   stage.innerHTML = "";
-  stage.style.aspectRatio = `${width} / ${height}`;
+  stage.style.aspectRatio = `${canvas.width} / ${canvas.height}`;
   // 大きな canvas を複製するとメモリを二重に持つため、そのまま表示に使う。
   stage.appendChild(canvas);
 
   const ideal = predictOutputSize(state.corners);
   el("resultMeta").innerHTML =
     `元の写真 ${state.source.width} × ${state.source.height} px → ` +
-    `補正後 <strong>${width} × ${height} px</strong>` +
-    (limited
+    `補正後 <strong>${canvas.width} × ${canvas.height} px</strong>` +
+    (state.result.limited
       ? `<br>ブラウザが扱える上限を超えるため、${ideal.width} × ${ideal.height} px から縮小しました。`
       : "");
+}
+
+function showResult() {
+  el("aspectSelect").value = "auto";
+  el("aspectCustom").hidden = true;
+  state.output = state.result.canvas;
+  renderResultStage();
 
   el("saveStatus").textContent = "";
   el("nextRow").hidden = true;
   showScreen("result");
 }
+
+el("aspectSelect").addEventListener("change", () => {
+  el("aspectCustom").hidden = el("aspectSelect").value !== "custom";
+  applyAspectSelection();
+});
+el("aspectW").addEventListener("input", applyAspectSelection);
+el("aspectH").addEventListener("input", applyAspectSelection);
 
 el("readjustBtn").addEventListener("click", () => {
   // 元画像と四隅は保持したまま編集へ戻る（非破壊）。
@@ -297,7 +370,7 @@ el("saveBtn").addEventListener("click", async () => {
 
   try {
     const blob = await new Promise((resolve, reject) => {
-      state.result.canvas.toBlob(
+      state.output.toBlob(
         (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
         format === "png" ? "image/png" : "image/jpeg",
         format === "png" ? undefined : JPEG_QUALITY,

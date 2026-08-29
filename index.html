@@ -319,6 +319,58 @@ lang: ja
       .more[open] > summary::before {
         content: "▾";
       }
+
+      /* 縦横比の指定 */
+      .aspect-row {
+        margin-top: 16px;
+        text-align: left;
+      }
+      .aspect-row label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .aspect-select {
+        width: 100%;
+        min-height: 44px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background-color: var(--surface);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 14px;
+        padding: 8px 12px;
+        box-sizing: border-box;
+      }
+      .aspect-custom {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .aspect-custom input {
+        width: 0;
+        flex: 1 1 auto;
+        min-height: 44px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 14px;
+        padding: 8px 12px;
+        box-sizing: border-box;
+        text-align: center;
+      }
+      .aspect-custom span {
+        color: var(--text-sub);
+      }
+      .aspect-hint {
+        font-size: 12px;
+        color: var(--text-sub);
+        margin: 6px 0 0;
+      }
+
+      /* 保存形式の選択 */
       .formats {
         display: flex;
         gap: 8px;
@@ -461,6 +513,41 @@ lang: ja
         <div class="instruction">補正しました</div>
         <div class="stage" id="resultStage"></div>
         <p class="meta" id="resultMeta"></p>
+        <div class="aspect-row">
+          <label for="aspectSelect">縦横比</label>
+          <select class="aspect-select" id="aspectSelect">
+            <option value="auto" selected>自動（検出のまま）</option>
+            <option value="4:3">4:3（横）</option>
+            <option value="3:4">3:4（縦）</option>
+            <option value="16:9">16:9（横）</option>
+            <option value="9:16">9:16（縦）</option>
+            <option value="custom">カスタム…</option>
+          </select>
+          <div class="aspect-custom" id="aspectCustom" hidden>
+            <input
+              type="number"
+              id="aspectW"
+              min="0.1"
+              step="0.1"
+              value="4"
+              inputmode="decimal"
+              aria-label="縦横比・横"
+            />
+            <span>:</span>
+            <input
+              type="number"
+              id="aspectH"
+              min="0.1"
+              step="0.1"
+              value="3"
+              inputmode="decimal"
+              aria-label="縦横比・縦"
+            />
+          </div>
+          <p class="aspect-hint">
+            斜め撮影の度合いによっては、自動補正の縦横比が実際の黒板とずれることがあります。ずれている場合はここで指定し直せます。
+          </p>
+        </div>
         <details class="more">
           <summary>保存形式を変える</summary>
           <div class="formats">
