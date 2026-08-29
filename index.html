@@ -214,6 +214,16 @@ lang: ja
          結果表示にも掛けるとチョーク文字を拡大して確認できなくなる。 */
       .stage--edit {
         touch-action: none;
+        /* iOS Safari は画像を長押しすると「写真を保存」等のコールアウトが
+           出てドラッグが中断される。角のハンドルをつまむ操作を邪魔しない
+           よう、編集中はここで止める。 */
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+        /* タップのたびに灰色のハイライト矩形が一瞬光ると、狙った位置に
+           指を置けたのか分かりにくい。角のハンドルを掴む操作の邪魔になる
+           ため消す。 */
+        -webkit-tap-highlight-color: transparent;
       }
       .stage canvas,
       .stage img {
