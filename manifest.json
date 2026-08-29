@@ -1,0 +1,27 @@
+{
+  "name": "黒板補正さん",
+  "short_name": "黒板補正",
+  "description": "斜めから撮った黒板・ホワイトボードの写真を、高解像度のまま正面から見た長方形に補正します。",
+  "lang": "ja",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f8f6f2",
+  "theme_color": "#f8f6f2",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

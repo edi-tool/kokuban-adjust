@@ -21,6 +21,10 @@ lang: ja
     <link rel="canonical" href="{{ site.url }}{{ site.baseurl }}/" />
 
     <link rel="icon" href="favicon.png" type="image/png" />
+    <!-- ホーム画面に追加して 1 タップで開けるようにする。
+         baseurl が /kokuban-adjust なので相対パスで書く。 -->
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="黒板補正さん | {{ page.title }}" />
@@ -83,9 +87,14 @@ lang: ja
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        /* dvh は iOS のアドレスバー伸縮を含んだ高さ。100vh だと画面下が
+           ツールバーに隠れ、主ボタンが折り返しの下へ潜ることがある。
+           dvh 非対応ブラウザ向けに 100vh を先に書いて上書きさせる。 */
         min-height: 100vh;
+        min-height: 100dvh;
         margin: 0;
-        padding: 16px calc(16px + env(safe-area-inset-right, 0px))
+        padding: calc(16px + env(safe-area-inset-top, 0px))
+          calc(16px + env(safe-area-inset-right, 0px))
           calc(16px + env(safe-area-inset-bottom, 0px))
           calc(16px + env(safe-area-inset-left, 0px));
         box-sizing: border-box;
@@ -170,14 +179,24 @@ lang: ja
         min-height: 56px;
       }
 
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
+      /* 主ボタンは常に単独で全幅。副次ボタンだけを 1 行に並べる。
+         3 つを均等に折り返すと 360px 幅で主ボタンが中段に来てしまう。 */
+      .actions-primary {
         margin-top: 16px;
       }
-      .actions .btn {
-        flex: 1 1 140px;
+      .actions-primary .btn {
+        width: 100%;
+      }
+      .actions-sub {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .actions-sub .btn {
+        flex: 1 1 0;
+        padding: 8px 8px;
+        font-size: 13px;
+        font-weight: 500;
       }
 
       /* 写真の表示・編集領域。aspect-ratio は画像に合わせて JS が指定する。 */
@@ -187,10 +206,14 @@ lang: ja
         border: 1px solid var(--border);
         border-radius: 8px;
         overflow: hidden;
-        touch-action: none;
         display: flex;
         align-items: center;
         justify-content: center;
+      }
+      /* 四隅ドラッグはブラウザのスクロール・ズームと競合するため編集中だけ止める。
+         結果表示にも掛けるとチョーク文字を拡大して確認できなくなる。 */
+      .stage--edit {
+        touch-action: none;
       }
       .stage canvas,
       .stage img {
@@ -264,6 +287,39 @@ lang: ja
         font-size: 13px;
       }
 
+      /* 開始画面の読み込み中表示。.busy は position:absolute なので
+         親に位置の基準と高さが要る。 */
+      #startBusy {
+        margin-top: 16px;
+        min-height: 160px;
+      }
+
+      /* 保存形式の選択。既定は JPEG のままでよいので折りたたみの中に置く。 */
+      .more {
+        margin-top: 16px;
+        text-align: left;
+      }
+      .more > summary {
+        font-size: 13px;
+        color: var(--text-sub);
+        cursor: pointer;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      /* display:flex にすると既定の三角が消え、押せると分からなくなる。 */
+      .more > summary::-webkit-details-marker {
+        display: none;
+      }
+      .more > summary::before {
+        content: "▸";
+        color: var(--accent);
+      }
+      .more[open] > summary::before {
+        content: "▾";
+      }
+
       /* 縦横比の指定 */
       .aspect-row {
         margin-top: 16px;
@@ -318,7 +374,6 @@ lang: ja
       .formats {
         display: flex;
         gap: 8px;
-        margin-top: 16px;
       }
       .formats label {
         flex: 1;
@@ -402,15 +457,30 @@ lang: ja
 
       <!-- 1. 写真を選ぶ -->
       <section id="screenStart">
-        <button type="button" class="btn btn-primary btn-cta" id="pickBtn">
-          黒板の写真を選ぶ
+        <button type="button" class="btn btn-primary btn-cta" id="shootBtn">
+          黒板をその場で撮る
         </button>
+        <div class="actions-sub">
+          <button type="button" class="btn" id="pickBtn">
+            撮影済みの写真から選ぶ
+          </button>
+        </div>
+        <!-- capture 付きは端末のカメラへ直行する。撮影済みを選ぶ導線と
+             両立させるため input を 2 つに分けている。 -->
+        <input
+          type="file"
+          id="cameraInput"
+          accept="image/*"
+          capture="environment"
+          hidden
+        />
         <input
           type="file"
           id="fileInput"
           accept="image/jpeg,image/png,image/webp,image/*"
           hidden
         />
+        <div class="stage" id="startBusy" hidden></div>
         <p
           class="error-msg"
           id="startError"
@@ -422,16 +492,18 @@ lang: ja
       <!-- 2. 四隅を合わせる -->
       <section id="screenEdit" hidden>
         <div class="instruction">黒板の四隅に合わせる</div>
-        <div class="stage" id="editStage"></div>
+        <div class="stage stage--edit" id="editStage"></div>
         <p class="note" id="editHint"></p>
         <p class="error-msg" id="editError" role="alert" aria-live="polite"></p>
-        <div class="actions">
+        <div class="actions-primary">
+          <button type="button" class="btn btn-primary" id="applyBtn">
+            補正する
+          </button>
+        </div>
+        <div class="actions-sub">
           <button type="button" class="btn" id="backBtn">写真を選び直す</button>
           <button type="button" class="btn" id="resetBtn">
             四隅をリセット
-          </button>
-          <button type="button" class="btn btn-primary" id="applyBtn">
-            補正する
           </button>
         </div>
       </section>
@@ -476,32 +548,43 @@ lang: ja
             斜め撮影の度合いによっては、自動補正の縦横比が実際の黒板とずれることがあります。ずれている場合はここで指定し直せます。
           </p>
         </div>
-        <div class="formats">
-          <label
-            ><input
-              type="radio"
-              name="format"
-              value="jpeg"
-              checked
-            />JPEG（高品質）</label
-          >
-          <label
-            ><input
-              type="radio"
-              name="format"
-              value="png"
-            />PNG（無劣化）</label
-          >
+        <details class="more">
+          <summary>保存形式を変える</summary>
+          <div class="formats">
+            <label
+              ><input
+                type="radio"
+                name="format"
+                value="jpeg"
+                checked
+              />JPEG（高品質）</label
+            >
+            <label
+              ><input
+                type="radio"
+                name="format"
+                value="png"
+              />PNG（無劣化）</label
+            >
+          </div>
+        </details>
+        <div class="actions-primary">
+          <button type="button" class="btn btn-primary" id="saveBtn">
+            保存する
+          </button>
         </div>
-        <div class="actions">
+        <div class="actions-sub">
           <button type="button" class="btn" id="readjustBtn">
             四隅を再調整
           </button>
           <button type="button" class="btn" id="restartBtn">
             最初からやり直す
           </button>
-          <button type="button" class="btn btn-primary" id="saveBtn">
-            保存する
+        </div>
+        <!-- 保存が終わってから出す。連続で板書を撮るときの導線。 -->
+        <div class="actions-sub" id="nextRow" hidden>
+          <button type="button" class="btn" id="nextBtn">
+            次の写真を補正する
           </button>
         </div>
         <p class="note" id="saveStatus"></p>

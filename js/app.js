@@ -30,6 +30,15 @@ import {
  */
 const JPEG_QUALITY = 0.92;
 
+/**
+ * canvas の 1 辺の上限。
+ *
+ * iOS Safari は 1 辺 16384 px を超える canvas を作れず、例外も出さずに
+ * 描画結果が空になる。縦横比を極端な値にしたときだけ効く保険なので、
+ * ここを緩めると「保存したら真っ白」という気付きにくい壊れ方に戻る。
+ */
+const MAX_CANVAS_DIMENSION = 16384;
+
 const el = (id) => document.getElementById(id);
 
 const screens = {
@@ -105,25 +114,30 @@ function formatBytes(bytes) {
 
 /* ------------------------------------------------------------------ start */
 
-el("pickBtn").addEventListener("click", () => el("fileInput").click());
-
-el("fileInput").addEventListener("change", async (event) => {
-  const file = event.target.files?.[0];
-  // 同じ写真を続けて選べるように値を消す。
-  event.target.value = "";
-  if (!file) return;
-
+/**
+ * 写真 1 枚を読み込んで四隅を検出し、編集画面へ進む。
+ * カメラ（capture 付き）と写真選択の両方の input から呼ぶ。
+ */
+async function handleFile(file) {
   const error = el("startError");
+  const buttons = [el("shootBtn"), el("pickBtn")];
+  const busyStage = el("startBusy");
+
   error.textContent = "";
-  const button = el("pickBtn");
-  const original = button.textContent;
-  button.disabled = true;
-  button.textContent = "読み込んでいます…";
+  for (const button of buttons) button.disabled = true;
+  busyStage.hidden = false;
+  busyStage.setAttribute("aria-busy", "true");
+  // 40MP では読み込みと検出で 1.5 秒以上かかる。どちらの段階かを出す。
+  let done = showBusy(busyStage, "写真を読み込んでいます…");
   await nextFrame();
 
   try {
     releaseAll();
     state.source = await loadImageFile(file);
+
+    done();
+    done = showBusy(busyStage, "黒板の四隅をさがしています…");
+    await nextFrame();
 
     const detection = await detectBoard(state.source.canvas);
     state.corners = detection.corners;
@@ -135,10 +149,24 @@ el("fileInput").addEventListener("change", async (event) => {
         ? err.message
         : "写真を読み込めませんでした。別の写真を試してください。";
   } finally {
-    button.disabled = false;
-    button.textContent = original;
+    done();
+    busyStage.hidden = true;
+    busyStage.removeAttribute("aria-busy");
+    for (const button of buttons) button.disabled = false;
   }
-});
+}
+
+function onFileInputChange(event) {
+  const file = event.target.files?.[0];
+  // 同じ写真を続けて選べるように値を消す。
+  event.target.value = "";
+  if (file) handleFile(file);
+}
+
+el("shootBtn").addEventListener("click", () => el("cameraInput").click());
+el("pickBtn").addEventListener("click", () => el("fileInput").click());
+el("cameraInput").addEventListener("change", onFileInputChange);
+el("fileInput").addEventListener("change", onFileInputChange);
 
 /* ------------------------------------------------------------------- edit */
 
@@ -218,8 +246,19 @@ el("applyBtn").addEventListener("click", async () => {
 function stretchToRatio(sourceCanvas, ratioW, ratioH) {
   const area = sourceCanvas.width * sourceCanvas.height;
   const ratio = ratioW / ratioH;
-  const width = Math.max(1, Math.round(Math.sqrt(area * ratio)));
-  const height = Math.max(1, Math.round(Math.sqrt(area / ratio)));
+  let width = Math.max(1, Math.round(Math.sqrt(area * ratio)));
+  let height = Math.max(1, Math.round(Math.sqrt(area / ratio)));
+
+  // 面積を保つ計算なので総ピクセル数は増えないが、極端な比では 1 辺だけが
+  // 伸びて canvas の 1 辺の上限を超える（例 1000:0.1 で 298547×30）。
+  // 超えた canvas は例外を出さず「真っ白のまま」になり、保存まで気付けない。
+  // iOS Safari の上限が 16384 px なので、そこに収まるよう比を保って縮める。
+  const longest = Math.max(width, height);
+  if (longest > MAX_CANVAS_DIMENSION) {
+    const shrink = MAX_CANVAS_DIMENSION / longest;
+    width = Math.max(1, Math.round(width * shrink));
+    height = Math.max(1, Math.round(height * shrink));
+  }
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -254,6 +293,10 @@ function applyAspectSelection() {
   releaseOutputIfDistinct();
   state.output = nextOutput;
   renderResultStage();
+
+  // 保存済みの表示が残っていると、比を変えた後の画像も保存済みだと誤解する。
+  el("saveStatus").textContent = "";
+  el("nextRow").hidden = true;
 }
 
 function renderResultStage() {
@@ -280,15 +323,24 @@ function showResult() {
   renderResultStage();
 
   el("saveStatus").textContent = "";
+  el("nextRow").hidden = true;
   showScreen("result");
 }
 
 el("aspectSelect").addEventListener("change", () => {
   el("aspectCustom").hidden = el("aspectSelect").value !== "custom";
+  clearTimeout(aspectInputTimer);
   applyAspectSelection();
 });
-el("aspectW").addEventListener("input", applyAspectSelection);
-el("aspectH").addEventListener("input", applyAspectSelection);
+// 1 文字打つたびに数百万画素の canvas を描き直すと入力が引っかかるので、
+// 数値入力のあいだだけ少し待つ。プルダウンは即時でよい。
+let aspectInputTimer = null;
+const applyAspectSelectionSoon = () => {
+  clearTimeout(aspectInputTimer);
+  aspectInputTimer = setTimeout(applyAspectSelection, 150);
+};
+el("aspectW").addEventListener("input", applyAspectSelectionSoon);
+el("aspectH").addEventListener("input", applyAspectSelectionSoon);
 
 el("readjustBtn").addEventListener("click", () => {
   // 元画像と四隅は保持したまま編集へ戻る（非破壊）。
@@ -301,6 +353,43 @@ el("restartBtn").addEventListener("click", () => {
   el("startError").textContent = "";
   showScreen("start");
 });
+
+/**
+ * 補正結果を端末に渡す。
+ *
+ * iOS Safari では `<a download>` はカメラロールに保存されず、ファイル App に
+ * 落ちるか単に開くだけになる。共有シート経由なら「画像を保存」で写真アプリへ
+ * 入るため、使える端末では Web Share を優先する。
+ *
+ * @returns {Promise<"shared"|"downloaded"|"canceled">}
+ */
+async function deliverBlob(blob, fileName) {
+  const file = new File([blob], fileName, { type: blob.type });
+
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] });
+      return "shared";
+    } catch (err) {
+      // シートを閉じただけ。失敗として扱わない。
+      if (err?.name === "AbortError" || err?.name === "NotAllowedError") {
+        return "canceled";
+      }
+      // 共有が使えなかった場合はダウンロードへ倒す。
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // revoke が早すぎると iOS Safari でダウンロードが中断されることがある。
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  return "downloaded";
+}
 
 el("saveBtn").addEventListener("click", async () => {
   const button = el("saveBtn");
@@ -322,18 +411,18 @@ el("saveBtn").addEventListener("click", async () => {
 
     const base = state.source.fileName.replace(/\.[^.]+$/, "") || "board";
     const fileName = `${base}_correct.${format === "png" ? "png" : "jpg"}`;
+    const size = formatBytes(blob.size);
+    const result = await deliverBlob(blob, fileName);
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    // revoke が早すぎると iOS Safari でダウンロードが中断されることがある。
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
-
-    status.textContent = `${fileName}（${formatBytes(blob.size)}）を保存しました。`;
+    if (result === "canceled") {
+      status.textContent = "保存を中止しました。";
+    } else {
+      status.textContent =
+        result === "shared"
+          ? `${fileName}（${size}）を渡しました。共有メニューの「画像を保存」で写真アプリに入ります。`
+          : `${fileName}（${size}）を保存しました。`;
+      el("nextRow").hidden = false;
+    }
   } catch {
     status.className = "error-msg";
     status.textContent = "保存できませんでした。もう一度お試しください。";
@@ -341,5 +430,25 @@ el("saveBtn").addEventListener("click", async () => {
     button.disabled = false;
   }
 });
+
+el("nextBtn").addEventListener("click", () => {
+  releaseAll();
+  el("startError").textContent = "";
+  showScreen("start");
+  // 撮り直しが続く使い方が多いのでカメラを直接開く。
+  el("cameraInput").click();
+});
+
+/* -------------------------------------------------------------------- 初期化 */
+
+// 共有シートが使える端末では保存先が写真アプリになるので文言を合わせる。
+// canShare は実際の File を渡さないと判定しないため、空のダミーで確認する。
+if (
+  navigator.canShare?.({
+    files: [new File([], "board.jpg", { type: "image/jpeg" })],
+  })
+) {
+  el("saveBtn").textContent = "写真に保存";
+}
 
 showScreen("start");
