@@ -30,6 +30,15 @@ import {
  */
 const JPEG_QUALITY = 0.92;
 
+/**
+ * canvas の 1 辺の上限。
+ *
+ * iOS Safari は 1 辺 16384 px を超える canvas を作れず、例外も出さずに
+ * 描画結果が空になる。縦横比を極端な値にしたときだけ効く保険なので、
+ * ここを緩めると「保存したら真っ白」という気付きにくい壊れ方に戻る。
+ */
+const MAX_CANVAS_DIMENSION = 16384;
+
 const el = (id) => document.getElementById(id);
 
 const screens = {
@@ -237,8 +246,19 @@ el("applyBtn").addEventListener("click", async () => {
 function stretchToRatio(sourceCanvas, ratioW, ratioH) {
   const area = sourceCanvas.width * sourceCanvas.height;
   const ratio = ratioW / ratioH;
-  const width = Math.max(1, Math.round(Math.sqrt(area * ratio)));
-  const height = Math.max(1, Math.round(Math.sqrt(area / ratio)));
+  let width = Math.max(1, Math.round(Math.sqrt(area * ratio)));
+  let height = Math.max(1, Math.round(Math.sqrt(area / ratio)));
+
+  // 面積を保つ計算なので総ピクセル数は増えないが、極端な比では 1 辺だけが
+  // 伸びて canvas の 1 辺の上限を超える（例 1000:0.1 で 298547×30）。
+  // 超えた canvas は例外を出さず「真っ白のまま」になり、保存まで気付けない。
+  // iOS Safari の上限が 16384 px なので、そこに収まるよう比を保って縮める。
+  const longest = Math.max(width, height);
+  if (longest > MAX_CANVAS_DIMENSION) {
+    const shrink = MAX_CANVAS_DIMENSION / longest;
+    width = Math.max(1, Math.round(width * shrink));
+    height = Math.max(1, Math.round(height * shrink));
+  }
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -273,6 +293,10 @@ function applyAspectSelection() {
   releaseOutputIfDistinct();
   state.output = nextOutput;
   renderResultStage();
+
+  // 保存済みの表示が残っていると、比を変えた後の画像も保存済みだと誤解する。
+  el("saveStatus").textContent = "";
+  el("nextRow").hidden = true;
 }
 
 function renderResultStage() {
@@ -305,10 +329,18 @@ function showResult() {
 
 el("aspectSelect").addEventListener("change", () => {
   el("aspectCustom").hidden = el("aspectSelect").value !== "custom";
+  clearTimeout(aspectInputTimer);
   applyAspectSelection();
 });
-el("aspectW").addEventListener("input", applyAspectSelection);
-el("aspectH").addEventListener("input", applyAspectSelection);
+// 1 文字打つたびに数百万画素の canvas を描き直すと入力が引っかかるので、
+// 数値入力のあいだだけ少し待つ。プルダウンは即時でよい。
+let aspectInputTimer = null;
+const applyAspectSelectionSoon = () => {
+  clearTimeout(aspectInputTimer);
+  aspectInputTimer = setTimeout(applyAspectSelection, 150);
+};
+el("aspectW").addEventListener("input", applyAspectSelectionSoon);
+el("aspectH").addEventListener("input", applyAspectSelectionSoon);
 
 el("readjustBtn").addEventListener("click", () => {
   // 元画像と四隅は保持したまま編集へ戻る（非破壊）。
