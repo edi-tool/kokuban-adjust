@@ -278,21 +278,35 @@ export function createCornerEditorAdapter({
     corners,
     // 指で角が隠れる問題を避けるため、ルーペは必ず有効にする。
     // サイズ・倍率は既定値（120px / 2倍）だと細いチョーク文字の角を
-    // 見分けにくいという報告があり、少し大きく・高倍率にしている。
-    magnifier: { enabled: true, size: 150, zoom: 3.2 },
+    // 見分けにくいという報告があり、大きく・高倍率にしている。
+    // margin（指先とルーペの間隔）も既定の 8px だと手・指に重なって見えにくい
+    // ことがあったため広げた。crosshair は白だと白いホワイトボードに埋もれる
+    // ため、他の UI と揃えてアクセントカラーにしている。
+    magnifier: {
+      enabled: true,
+      size: 170,
+      zoom: 3.5,
+      margin: 16,
+      crosshairColor: "#f28c06",
+      crosshairSize: 24,
+      borderWidth: 3,
+    },
     // 指先だと角そのものにピクセル単位で正確に合わせにくいという報告への対応。
     // ドラッグで大まかに合わせた後、選択中の角を上下左右ボタンで微調整できる
     // ようにする（scanic 標準機能。ドラッグ操作自体は変更しない）。
     nudges: { enabled: true, steps: [1, 10] },
     // 操作ボタンはアプリ側の UI に統一するため、scanic のツールバーは出さない。
     toolbar: { enabled: false },
-    handleHitArea: 44,
+    // Apple/Material のタッチターゲット推奨値（44〜48px）の上限寄り。
+    // スマートフォンでの実際の指先の接地面はこれより大きいことが多く、
+    // 少し余裕を持たせたほうが掴みやすい。
+    handleHitArea: 48,
     keyboard: true,
     theme: {
       accent: "#f28c06",
       mask: "rgba(15, 15, 15, 0.5)",
-      handleSize: 22,
-      handleHit: 44,
+      handleSize: 24,
+      handleHit: 48,
       handleColor: "#ffffff",
       handleRingColor: "#f28c06",
     },
