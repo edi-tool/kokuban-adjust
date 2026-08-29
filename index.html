@@ -457,12 +457,12 @@ lang: ja
 
       <!-- 1. 写真を選ぶ -->
       <section id="screenStart">
-        <button type="button" class="btn btn-primary btn-cta" id="shootBtn">
-          黒板をその場で撮る
+        <button type="button" class="btn btn-primary btn-cta" id="pickBtn">
+          撮影済みの写真から選ぶ
         </button>
         <div class="actions-sub">
-          <button type="button" class="btn" id="pickBtn">
-            撮影済みの写真から選ぶ
+          <button type="button" class="btn" id="shootBtn">
+            黒板をその場で撮る
           </button>
         </div>
         <!-- capture 付きは端末のカメラへ直行する。撮影済みを選ぶ導線と
@@ -518,9 +518,9 @@ lang: ja
           <select class="aspect-select" id="aspectSelect">
             <option value="auto" selected>自動（検出のまま）</option>
             <option value="4:3">4:3（横）</option>
-            <option value="3:4">3:4（縦）</option>
+            <option value="3:2">3:2（横）</option>
             <option value="16:9">16:9（横）</option>
-            <option value="9:16">9:16（縦）</option>
+            <option value="16:10">16:10（横）</option>
             <option value="custom">カスタム…</option>
           </select>
           <div class="aspect-custom" id="aspectCustom" hidden>
