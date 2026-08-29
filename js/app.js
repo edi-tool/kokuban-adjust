@@ -302,7 +302,9 @@ function applyAspectSelection() {
 function renderResultStage() {
   const canvas = state.output;
   const stage = el("resultStage");
-  stage.innerHTML = "";
+  // stage.innerHTML でまとめて消すと境界ドラッグ用ハンドル（常設の DOM）も
+  // 消えてしまうため、前回の canvas だけを取り除く。
+  stage.querySelector("canvas")?.remove();
   stage.style.aspectRatio = `${canvas.width} / ${canvas.height}`;
   // 大きな canvas を複製するとメモリを二重に持つため、そのまま表示に使う。
   stage.appendChild(canvas);
@@ -341,6 +343,98 @@ const applyAspectSelectionSoon = () => {
 };
 el("aspectW").addEventListener("input", applyAspectSelectionSoon);
 el("aspectH").addEventListener("input", applyAspectSelectionSoon);
+
+/**
+ * 結果画像の上下左右の境界をドラッグして縦横比を変える。
+ *
+ * 縦横比 UI（プルダウン・カスタム入力）と同じ stretchToRatio を使うため、
+ * 仕組みは別物ではなく「カスタム欄への別の入力手段」。ドラッグ中は毎フレーム
+ * 数百万画素の canvas を描き直すと重いので、CSS で canvas を枠いっぱいに
+ * 引き伸ばして見た目だけ追従させ、指を離した瞬間に一度だけ本物の
+ * stretchToRatio で描き直す。
+ */
+const MIN_EDGE_FRACTION = 0.25;
+const MAX_EDGE_FRACTION = 4;
+let edgeDrag = null;
+
+function beginEdgeDrag(handle, event) {
+  if (!state.output || edgeDrag) return;
+  event.preventDefault();
+  const stage = el("resultStage");
+  const rect = stage.getBoundingClientRect();
+  edgeDrag = {
+    edge: handle.dataset.edge,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    startWidth: rect.width,
+    startHeight: rect.height,
+    width: rect.width,
+    height: rect.height,
+  };
+  handle.classList.add("is-active");
+  stage.classList.add("is-dragging");
+  try {
+    handle.setPointerCapture(event.pointerId);
+  } catch {
+    // Pointer Events 非対応環境向けのフォールバックは持たない。
+  }
+}
+
+function moveEdgeDrag(event) {
+  if (!edgeDrag || event.pointerId !== edgeDrag.pointerId) return;
+  const dx = event.clientX - edgeDrag.startX;
+  const dy = event.clientY - edgeDrag.startY;
+  let width = edgeDrag.startWidth;
+  let height = edgeDrag.startHeight;
+  if (edgeDrag.edge === "left") width -= dx;
+  else if (edgeDrag.edge === "right") width += dx;
+  else if (edgeDrag.edge === "top") height -= dy;
+  else if (edgeDrag.edge === "bottom") height += dy;
+
+  width = Math.min(
+    edgeDrag.startWidth * MAX_EDGE_FRACTION,
+    Math.max(edgeDrag.startWidth * MIN_EDGE_FRACTION, width),
+  );
+  height = Math.min(
+    edgeDrag.startHeight * MAX_EDGE_FRACTION,
+    Math.max(edgeDrag.startHeight * MIN_EDGE_FRACTION, height),
+  );
+
+  edgeDrag.width = width;
+  edgeDrag.height = height;
+  el("resultStage").style.aspectRatio = `${width} / ${height}`;
+}
+
+function endEdgeDrag(event) {
+  if (!edgeDrag || event.pointerId !== edgeDrag.pointerId) return;
+  const { edge, width, height } = edgeDrag;
+  edgeDrag = null;
+
+  const stage = el("resultStage");
+  stage.classList.remove("is-dragging");
+  stage.querySelector(`.edge-handle--${edge}`)?.classList.remove("is-active");
+
+  // 比率を扱いやすい数値にそろえてカスタム欄へ反映し、既存の縦横比 UI と
+  // 状態を一致させる（保存・再描画は applyAspectSelection に一本化する）。
+  const ratio = width / height;
+  el("aspectSelect").value = "custom";
+  el("aspectCustom").hidden = false;
+  el("aspectH").value = "10";
+  el("aspectW").value = String(Math.round(ratio * 100) / 10);
+
+  clearTimeout(aspectInputTimer);
+  applyAspectSelection();
+}
+
+for (const handle of document.querySelectorAll(".edge-handle")) {
+  handle.addEventListener("pointerdown", (event) =>
+    beginEdgeDrag(handle, event),
+  );
+  handle.addEventListener("pointermove", moveEdgeDrag);
+  handle.addEventListener("pointerup", endEdgeDrag);
+  handle.addEventListener("pointercancel", endEdgeDrag);
+}
 
 el("readjustBtn").addEventListener("click", () => {
   // 元画像と四隅は保持したまま編集へ戻る（非破壊）。

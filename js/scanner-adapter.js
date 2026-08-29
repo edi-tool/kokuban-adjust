@@ -277,8 +277,13 @@ export function createCornerEditorAdapter({
     image,
     corners,
     // 指で角が隠れる問題を避けるため、ルーペは必ず有効にする。
-    magnifier: { enabled: true, size: 128, zoom: 2.5 },
-    nudges: { enabled: false },
+    // サイズ・倍率は既定値（120px / 2倍）だと細いチョーク文字の角を
+    // 見分けにくいという報告があり、少し大きく・高倍率にしている。
+    magnifier: { enabled: true, size: 150, zoom: 3.2 },
+    // 指先だと角そのものにピクセル単位で正確に合わせにくいという報告への対応。
+    // ドラッグで大まかに合わせた後、選択中の角を上下左右ボタンで微調整できる
+    // ようにする（scanic 標準機能。ドラッグ操作自体は変更しない）。
+    nudges: { enabled: true, steps: [1, 10] },
     // 操作ボタンはアプリ側の UI に統一するため、scanic のツールバーは出さない。
     toolbar: { enabled: false },
     handleHitArea: 44,

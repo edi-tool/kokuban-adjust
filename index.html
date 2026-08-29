@@ -222,6 +222,80 @@ lang: ja
         display: block;
       }
 
+      /* 結果画面の境界ドラッグ中は、canvas を実寸ではなく枠いっぱいに
+         引き伸ばして表示する（ドラッグ終了時に本物の縦横比変更へ差し替える）。
+         毎フレーム数百万画素を描き直さずに済むための見た目だけのプレビュー。 */
+      #resultStage.is-dragging canvas {
+        width: 100%;
+        height: 100%;
+        max-width: none;
+        max-height: none;
+      }
+
+      /* 縦横比を変える境界ハンドル。画像の四辺のすぐ内側に置き、
+         ドラッグで stretchToRatio（js/app.js）へ渡す比率を作る。 */
+      .edge-handle {
+        position: absolute;
+        z-index: 4;
+        touch-action: none;
+      }
+      .edge-handle::after {
+        content: "";
+        position: absolute;
+        background-color: var(--accent);
+        border-radius: 999px;
+        opacity: 0.55;
+        transition: opacity 0.15s;
+      }
+      .edge-handle:hover::after,
+      .edge-handle.is-active::after {
+        opacity: 0.95;
+      }
+      .edge-handle--top,
+      .edge-handle--bottom {
+        left: 50%;
+        width: 72px;
+        height: 28px;
+        transform: translateX(-50%);
+        cursor: ns-resize;
+      }
+      .edge-handle--top {
+        top: 0;
+      }
+      .edge-handle--bottom {
+        bottom: 0;
+      }
+      .edge-handle--top::after,
+      .edge-handle--bottom::after {
+        left: 50%;
+        top: 50%;
+        width: 40px;
+        height: 4px;
+        transform: translate(-50%, -50%);
+      }
+      .edge-handle--left,
+      .edge-handle--right {
+        top: 50%;
+        width: 28px;
+        height: 72px;
+        transform: translateY(-50%);
+        cursor: ew-resize;
+      }
+      .edge-handle--left {
+        left: 0;
+      }
+      .edge-handle--right {
+        right: 0;
+      }
+      .edge-handle--left::after,
+      .edge-handle--right::after {
+        top: 50%;
+        left: 50%;
+        width: 4px;
+        height: 40px;
+        transform: translate(-50%, -50%);
+      }
+
       /* 進行中表示 */
       .busy {
         position: absolute;
@@ -511,8 +585,32 @@ lang: ja
       <!-- 3. 保存する -->
       <section id="screenResult" hidden>
         <div class="instruction">補正しました</div>
-        <div class="stage" id="resultStage"></div>
+        <div class="stage" id="resultStage">
+          <div
+            class="edge-handle edge-handle--top"
+            data-edge="top"
+            aria-hidden="true"
+          ></div>
+          <div
+            class="edge-handle edge-handle--right"
+            data-edge="right"
+            aria-hidden="true"
+          ></div>
+          <div
+            class="edge-handle edge-handle--bottom"
+            data-edge="bottom"
+            aria-hidden="true"
+          ></div>
+          <div
+            class="edge-handle edge-handle--left"
+            data-edge="left"
+            aria-hidden="true"
+          ></div>
+        </div>
         <p class="meta" id="resultMeta"></p>
+        <p class="aspect-hint">
+          画像の上下左右の境界をドラッグしても縦横比を変えられます。
+        </p>
         <div class="aspect-row">
           <label for="aspectSelect">縦横比</label>
           <select class="aspect-select" id="aspectSelect">
