@@ -86,6 +86,22 @@ export function fallbackCorners(image) {
   };
 }
 
+/**
+ * 写真そのものの四隅（画像全体）。
+ *
+ * 黒板が写真いっぱいに写っているときは、自動検出のわずかなずれを直すより
+ * 「写真全体」から始めて内側へ寄せるほうが早い。編集画面のボタンから使う。
+ */
+export function imageBoundsCorners(image) {
+  const { width, height } = sourceSize(image);
+  return {
+    topLeft: { x: 0, y: 0 },
+    topRight: { x: width, y: 0 },
+    bottomRight: { x: width, y: height },
+    bottomLeft: { x: 0, y: height },
+  };
+}
+
 /** 四隅が画像の外へ出ないよう丸める。 */
 function clampCorners(corners, image) {
   const { width, height } = sourceSize(image);
@@ -134,14 +150,42 @@ function quadArea(c) {
 }
 
 /**
- * 検出結果が「黒板・ホワイトボードとしてありえる形か」を判定する。
+ * 四隅が凸四角形（ねじれていない）かを判定する。
+ *
+ * 隣り合う角を入れ替えるように動かすと辺が交差した「砂時計型」になり、
+ * 透視変換の行列が破綻して結果が渦を巻いたり真っ黒になったりする。
+ * 検出結果の絞り込みと、手動編集の確定前チェックの両方で使う。
+ */
+export function isConvexQuad(corners) {
+  const pts = [
+    corners.topLeft,
+    corners.topRight,
+    corners.bottomRight,
+    corners.bottomLeft,
+  ];
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const a = pts[i];
+    const b = pts[(i + 1) % 4];
+    const c = pts[(i + 2) % 4];
+    const cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+    if (cross === 0) continue; // 3 点が一直線。ここだけでは判断しない。
+    if (sign !== 0 && Math.sign(cross) !== sign) return false;
+    sign = Math.sign(cross);
+  }
+  // 全辺が一直線（面積 0）なら sign は 0 のまま。四角形として扱わない。
+  return sign !== 0;
+}
+
+/**
+ * 検出結果が「黒板・ホワイトボードとしてありえる形か」を判定する（確度は見ない）。
  *
  * 黒板は写真の大部分を占め、極端に細長くはならない、という用途固有の
  * 前提を使った絞り込み。汎用の Document Scanner では弾けない誤検出
  * （壁の模様や掲示物の縁を拾った細長い四角形）をここで落とす。
  */
-function isPlausibleBoard(corners, confidence, image) {
-  if (confidence != null && confidence < MIN_CONFIDENCE) return false;
+function hasBoardShape(corners, image) {
+  if (!isConvexQuad(corners)) return false;
 
   const { width, height } = sourceSize(image);
   if (quadArea(corners) < width * height * MIN_AREA_RATIO) return false;
@@ -157,43 +201,51 @@ function isPlausibleBoard(corners, confidence, image) {
  * 検出は縮小画像で行われるが、返る座標は常に原寸画像座標系。
  * 検出に失敗しても例外にはせず、success:false と手動編集用の初期四隅を返す。
  *
+ * 失敗の扱いは 2 段階。「形は黒板としてありえるが確度が足りない」候補が
+ * あれば、採用はしないが手動編集の初期四隅としては使う（success は false の
+ * まま、案内文も「自動検出できませんでした」のまま）。画像端から一律 8% の
+ * 長方形より板面に近いことが多く、手で合わせ直す距離が短くなる。
+ * 形の条件（hasBoardShape）を通らない候補は、確度に関わらず捨てる。
+ *
  * @param {HTMLCanvasElement|HTMLImageElement} image 原寸画像
  * @param {'classical'|'ml'} detector
  */
 export async function detectBoard(image, detector = "classical") {
   const startedAt = performance.now();
-  const fail = () => ({
-    success: false,
-    corners: fallbackCorners(image),
-    confidence: null,
+  const done = (success, corners, confidence) => ({
+    success,
+    corners,
+    confidence,
     elapsedMs: performance.now() - startedAt,
   });
 
+  let result;
   try {
-    const result = await scanDocument(image, {
+    result = await scanDocument(image, {
       mode: "detect",
       detector,
       maxProcessingDimension: DETECT_MAX_DIMENSION,
     });
-    const confidence = result.confidence ?? result.score ?? null;
-
-    if (
-      result.success &&
-      result.corners &&
-      isPlausibleBoard(result.corners, confidence, image)
-    ) {
-      return {
-        success: true,
-        corners: clampCorners(result.corners, image),
-        confidence,
-        elapsedMs: performance.now() - startedAt,
-      };
-    }
-    return fail();
   } catch {
     // 検出の失敗でアプリを止めない。手動 4 点指定へ倒す。
-    return fail();
+    return done(false, fallbackCorners(image), null);
   }
+
+  if (!result?.success || !result.corners) {
+    return done(false, fallbackCorners(image), null);
+  }
+
+  const corners = clampCorners(result.corners, image);
+  if (!hasBoardShape(corners, image)) {
+    return done(false, fallbackCorners(image), null);
+  }
+
+  const confidence = result.confidence ?? result.score ?? null;
+  if (confidence == null || confidence >= MIN_CONFIDENCE) {
+    return done(true, corners, confidence);
+  }
+  // 形は妥当なので、手動編集の出発点としてだけ使う。
+  return done(false, corners, confidence);
 }
 
 function scaleCorners(corners, factor) {
@@ -315,6 +367,8 @@ export function createCornerEditorAdapter({
 
   return {
     getCorners: () => editor.getCorners(),
+    // 「元に戻す」「写真全体」など、アプリ側から四隅を差し替えるために使う。
+    setCorners: (next) => editor.setCorners(next),
     reset: () => editor.reset(),
     destroy: () => editor.destroy(),
   };
