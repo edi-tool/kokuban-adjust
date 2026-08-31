@@ -18,6 +18,8 @@ import {
   correctPerspective,
   createCornerEditorAdapter,
   detectBoard,
+  imageBoundsCorners,
+  isConvexQuad,
   predictOutputSize,
 } from "./scanner-adapter.js";
 
@@ -56,6 +58,9 @@ const state = {
   result: null, // { canvas, width, height, limited } 透視補正そのままの結果（不変）
   output: null, // 表示・保存に使う canvas。縦横比指定がなければ result.canvas と同一。
   editor: null,
+  // 四隅編集の「元に戻す」用。1 回のドラッグ＝1 段として積む（pushUndoState 参照）。
+  history: [],
+  committedCorners: null,
 };
 
 function showScreen(name) {
@@ -71,11 +76,17 @@ function destroyEditor() {
   }
 }
 
-/** state.output が state.result.canvas と別物なら解放する（縦横比変更で作った canvas）。 */
+/**
+ * 結果画面は canvas を 2 つ持つ。
+ *   result.canvas … 透視補正そのままの結果（不変。再計算しない）
+ *   output        … 縦横比を適用したもの（指定なしなら result.canvas と同一）
+ * 同一のときに解放すると元まで壊すため、別物のときだけ解放する。
+ */
 function releaseOutputIfDistinct() {
   if (state.output && state.output !== state.result?.canvas) {
     releaseCanvas(state.output);
   }
+  state.output = null;
 }
 
 /** 元画像・補正結果を破棄する。連続処理でメモリが増え続けないようにする。 */
@@ -86,8 +97,9 @@ function releaseAll() {
   releaseCanvas(state.result?.canvas);
   state.source = null;
   state.result = null;
-  state.output = null;
   state.corners = null;
+  state.history = [];
+  state.committedCorners = null;
 }
 
 /** 処理中の表示を出す。戻り値を呼ぶと消える。 */
@@ -171,6 +183,58 @@ el("fileInput").addEventListener("change", onFileInputChange);
 /* ------------------------------------------------------------------- edit */
 
 /**
+ * 「元に戻す」の 1 段。
+ *
+ * scanic の onChange はドラッグ中に何度も飛んでくるため、1 ピクセル動くたびに
+ * 履歴が増えると「元に戻す」が実質使えない。手が止まってからこの時間だけ
+ * 待って 1 段にまとめる（ドラッグ 1 回＝1 段、微調整ボタンの連打も 1 段）。
+ */
+const UNDO_COMMIT_DELAY = 350;
+
+/** 履歴の上限。四隅 4 点だけなので軽いが、際限なく持つ必要もない。 */
+const UNDO_LIMIT = 30;
+
+let undoCommitTimer = null;
+
+const cloneCorners = (c) => ({
+  topLeft: { ...c.topLeft },
+  topRight: { ...c.topRight },
+  bottomRight: { ...c.bottomRight },
+  bottomLeft: { ...c.bottomLeft },
+});
+
+function updateUndoButton() {
+  el("undoBtn").disabled = state.history.length === 0;
+}
+
+/** 現在の確定状態を履歴へ積む（setCorners で置き換える操作の直前に呼ぶ）。 */
+function pushUndoState() {
+  if (!state.committedCorners) return;
+  state.history.push(state.committedCorners);
+  if (state.history.length > UNDO_LIMIT) state.history.shift();
+  updateUndoButton();
+}
+
+/** 履歴を初期化する。編集画面を開くたびに呼ぶ。 */
+function resetUndoHistory(corners) {
+  clearTimeout(undoCommitTimer);
+  undoCommitTimer = null;
+  state.history = [];
+  state.committedCorners = cloneCorners(corners);
+  updateUndoButton();
+}
+
+/** 四隅をアプリ側から差し替える（履歴に 1 段積んでから置き換える）。 */
+function replaceCorners(next) {
+  clearTimeout(undoCommitTimer);
+  undoCommitTimer = null;
+  pushUndoState();
+  state.corners = cloneCorners(next);
+  state.committedCorners = cloneCorners(next);
+  state.editor?.setCorners(next);
+}
+
+/**
  * 四隅編集画面を開く。
  * @param {boolean} detected 自動検出に成功したか（案内文の出し分けに使う）
  */
@@ -195,9 +259,17 @@ function openEditor(detected) {
     corners: state.corners,
     onChange: (corners) => {
       state.corners = corners;
+      // 手が止まってから 1 段だけ履歴に積む（UNDO_COMMIT_DELAY 参照）。
+      clearTimeout(undoCommitTimer);
+      undoCommitTimer = setTimeout(() => {
+        undoCommitTimer = null;
+        pushUndoState();
+        state.committedCorners = cloneCorners(state.corners);
+      }, UNDO_COMMIT_DELAY);
     },
   });
 
+  resetUndoHistory(state.corners);
   showScreen("edit");
 }
 
@@ -208,8 +280,29 @@ el("backBtn").addEventListener("click", () => {
 });
 
 el("resetBtn").addEventListener("click", () => {
+  clearTimeout(undoCommitTimer);
+  undoCommitTimer = null;
+  pushUndoState();
   state.editor?.reset();
   state.corners = state.editor?.getCorners() ?? state.corners;
+  state.committedCorners = cloneCorners(state.corners);
+});
+
+// 黒板が写真いっぱいに写っているときは、検出結果を直すより写真全体から
+// 内側へ寄せるほうが早い。
+el("wholeBtn").addEventListener("click", () => {
+  replaceCorners(imageBoundsCorners(state.source.canvas));
+});
+
+el("undoBtn").addEventListener("click", () => {
+  clearTimeout(undoCommitTimer);
+  undoCommitTimer = null;
+  const previous = state.history.pop();
+  if (!previous) return;
+  state.corners = cloneCorners(previous);
+  state.committedCorners = cloneCorners(previous);
+  state.editor?.setCorners(previous);
+  updateUndoButton();
 });
 
 el("applyBtn").addEventListener("click", async () => {
@@ -217,6 +310,16 @@ el("applyBtn").addEventListener("click", async () => {
   const stage = el("editStage");
   const error = el("editError");
   error.textContent = "";
+
+  // ねじれた四角形（辺が交差している）を渡すと透視変換が破綻し、渦を巻いた
+  // 画像や真っ黒の画像が出てくる。scanic のドラッグは交差する移動自体を
+  // 受け付けないので通常は起きないが、破綻した結果を黙って保存させるより、
+  // 原因の分かる文言で止めるほうがよい（最後の砦としてのチェック）。
+  if (!isConvexQuad(state.corners)) {
+    error.textContent =
+      "四隅がねじれています。左上・右上・右下・左下がこの順に並ぶよう、白い丸を動かしてください。";
+    return;
+  }
 
   const done = showBusy(stage, "補正しています…");
   await nextFrame();
@@ -329,6 +432,20 @@ function showResult() {
   showScreen("result");
 }
 
+/**
+ * 縦横比 UI の「カスタム…」へ w:h を書き込む。
+ *
+ * 高さを 10 に固定して幅を小数第 1 位までにそろえる。境界ドラッグ・回転・
+ * 入れ替えのどれも、最終的にはこの 1 か所を通して applyAspectSelection に
+ * 渡すので、UI の表示と実際の出力が食い違わない。
+ */
+function setCustomRatio(w, h) {
+  el("aspectSelect").value = "custom";
+  el("aspectCustom").hidden = false;
+  el("aspectH").value = "10";
+  el("aspectW").value = String(Math.round((w / h) * 100) / 10);
+}
+
 el("aspectSelect").addEventListener("change", () => {
   el("aspectCustom").hidden = el("aspectSelect").value !== "custom";
   clearTimeout(aspectInputTimer);
@@ -417,11 +534,7 @@ function endEdgeDrag(event) {
 
   // 比率を扱いやすい数値にそろえてカスタム欄へ反映し、既存の縦横比 UI と
   // 状態を一致させる（保存・再描画は applyAspectSelection に一本化する）。
-  const ratio = width / height;
-  el("aspectSelect").value = "custom";
-  el("aspectCustom").hidden = false;
-  el("aspectH").value = "10";
-  el("aspectW").value = String(Math.round(ratio * 100) / 10);
+  setCustomRatio(width, height);
 
   clearTimeout(aspectInputTimer);
   applyAspectSelection();

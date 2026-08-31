@@ -167,7 +167,8 @@ lang: ja
         background-color: var(--accent-dark);
         border-color: var(--accent-dark);
       }
-      .btn-primary:disabled {
+      .btn-primary:disabled,
+      .btn:disabled {
         opacity: 0.55;
         cursor: default;
         pointer-events: none;
@@ -585,10 +586,17 @@ lang: ja
           </button>
         </div>
         <div class="actions-sub">
-          <button type="button" class="btn" id="backBtn">写真を選び直す</button>
-          <button type="button" class="btn" id="resetBtn">
-            四隅をリセット
+          <button type="button" class="btn" id="undoBtn" disabled>
+            元に戻す
           </button>
+          <!-- 3 つ並べる行なので、折り返さない短さにする（390px 幅で検証）。 -->
+          <button type="button" class="btn" id="resetBtn">リセット</button>
+          <!-- 黒板が写真いっぱいのときは、検出結果を直すより写真全体から
+               内側へ寄せるほうが早い。 -->
+          <button type="button" class="btn" id="wholeBtn">写真全体</button>
+        </div>
+        <div class="actions-sub">
+          <button type="button" class="btn" id="backBtn">写真を選び直す</button>
         </div>
       </section>
 
