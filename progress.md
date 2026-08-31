@@ -476,3 +476,30 @@ scanic 自体には手を入れていないが、コンテナ側の CSS でス�
 - `-webkit-touch-callout` 等 iOS 固有 CSS の実機（Safari）検証が未実施。
 - ハブページ（`edi-tool/edi-tool.github.io`）・`sitemap.xml` への本ツール
   追加は未実施。
+
+## 2026-08-31 セッション（マージ済みブランチの整理）
+
+### 依頼内容
+
+「5 つのブランチを安全にマージして、ブランチを削除」という依頼だったが、
+調査の結果 `main` 以外に残っていた 4 ブランチ
+（`claude/diagonal-image-aspect-ratio-ywgio8` /
+`claude/improve-corner-detection-accuracy` /
+`claude/kokuban-correction-tool-q5ms6o` / `claude/session-close-notes`）は
+いずれも PR #1〜#5 経由ですでに `main` にマージ済みで（`main` はその後
+PR #9〜#11 でさらに先行）、`git merge-base --is-ancestor` で全ブランチが
+`main` の祖先であることを確認した。コンフリクトや未マージの変更はなし。
+そのためマージ作業は不要と判断し、ブランチ削除のみが残タスクだった。
+
+### ブランチ削除
+
+このセッションの環境からは `git push origin --delete` が
+プロキシ側で HTTP 403（ref 削除をブロックする挙動）になり、GitHub MCP
+サーバーにも branch 削除用のツールが無かったため、セッション内からは
+削除できなかった。ユーザーに手動削除を依頼し、`main` のみが残っている
+ことを `list_branches` で確認した（上記 4 ブランチは削除済み）。
+
+### 状態
+
+- `main` の状態は変更なし（マージ対象がそもそも無かったため）。
+- 残課題は前回までの記録（このファイル末尾の表・箇条書き）から変更なし。
