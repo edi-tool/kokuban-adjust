@@ -56,10 +56,7 @@ const state = {
   // 手動指定で確定した後の「再調整」では自動検出扱いにしないよう保持する。
   detected: false,
   result: null, // { canvas, width, height, limited } 透視補正そのままの結果（不変）
-  // 回転を適用した canvas。回転なしなら result.canvas と同一。
-  base: null,
-  rotation: 0, // 0 / 90 / 180 / 270（時計回り）
-  output: null, // 表示・保存に使う canvas。縦横比指定がなければ base と同一。
+  output: null, // 表示・保存に使う canvas。縦横比指定がなければ result.canvas と同一。
   editor: null,
   // 四隅編集の「元に戻す」用。1 回のドラッグ＝1 段として積む（pushUndoState 参照）。
   history: [],
@@ -80,28 +77,16 @@ function destroyEditor() {
 }
 
 /**
- * 結果画面は 3 段構えで canvas を持つ。
+ * 結果画面は canvas を 2 つ持つ。
  *   result.canvas … 透視補正そのままの結果（不変。再計算しない）
- *   base          … 回転を適用したもの（回転 0 なら result.canvas と同一）
- *   output        … 縦横比を適用したもの（指定なしなら base と同一）
+ *   output        … 縦横比を適用したもの（指定なしなら result.canvas と同一）
  * 同一のときに解放すると元まで壊すため、別物のときだけ解放する。
  */
 function releaseOutputIfDistinct() {
-  if (
-    state.output &&
-    state.output !== state.base &&
-    state.output !== state.result?.canvas
-  ) {
+  if (state.output && state.output !== state.result?.canvas) {
     releaseCanvas(state.output);
   }
   state.output = null;
-}
-
-function releaseBaseIfDistinct() {
-  if (state.base && state.base !== state.result?.canvas) {
-    releaseCanvas(state.base);
-  }
-  state.base = null;
 }
 
 /** 元画像・補正結果を破棄する。連続処理でメモリが増え続けないようにする。 */
@@ -109,14 +94,12 @@ function releaseAll() {
   destroyEditor();
   if (state.source) releaseCanvas(state.source.canvas);
   releaseOutputIfDistinct();
-  releaseBaseIfDistinct();
   releaseCanvas(state.result?.canvas);
   state.source = null;
   state.result = null;
   state.corners = null;
   state.history = [];
   state.committedCorners = null;
-  state.rotation = 0;
 }
 
 /** 処理中の表示を出す。戻り値を呼ぶと消える。 */
@@ -343,7 +326,6 @@ el("applyBtn").addEventListener("click", async () => {
 
   try {
     releaseOutputIfDistinct();
-    releaseBaseIfDistinct();
     releaseCanvas(state.result?.canvas);
     state.result = await correctPerspective(state.source.canvas, state.corners);
     showResult();
@@ -391,41 +373,6 @@ function stretchToRatio(sourceCanvas, ratioW, ratioH) {
   return canvas;
 }
 
-/**
- * 補正結果を 90 度単位で回す。
- *
- * 黒板を横から撮ると、四隅の対応（どこが「上辺」か）が写真の向きとずれ、
- * 補正結果が寝たまま出てくることがある。四隅を取り直すより、出来上がりを
- * 回すほうが早い。回転は補正結果 canvas を再計算せず、そこから作り直すだけ
- * なので画質は落ちない（拡大縮小をしない）。
- */
-function rotateCanvas(sourceCanvas, degrees) {
-  const swap = degrees === 90 || degrees === 270;
-  const canvas = document.createElement("canvas");
-  canvas.width = swap ? sourceCanvas.height : sourceCanvas.width;
-  canvas.height = swap ? sourceCanvas.width : sourceCanvas.height;
-  const ctx = canvas.getContext("2d");
-  ctx.translate(canvas.width / 2, canvas.height / 2);
-  ctx.rotate((degrees * Math.PI) / 180);
-  ctx.drawImage(
-    sourceCanvas,
-    -sourceCanvas.width / 2,
-    -sourceCanvas.height / 2,
-  );
-  return canvas;
-}
-
-/** state.rotation から state.base を作り直す。 */
-function rebuildBase() {
-  const next =
-    state.rotation === 0
-      ? state.result.canvas
-      : rotateCanvas(state.result.canvas, state.rotation);
-  releaseOutputIfDistinct();
-  releaseBaseIfDistinct();
-  state.base = next;
-}
-
 /** 縦横比 UI の現在値を { w, h } で返す。「自動」または未入力なら null。 */
 function selectedRatio() {
   const mode = el("aspectSelect").value;
@@ -443,8 +390,8 @@ function selectedRatio() {
 function applyAspectSelection() {
   const ratio = selectedRatio();
   const nextOutput = ratio
-    ? stretchToRatio(state.base, ratio.w, ratio.h)
-    : state.base;
+    ? stretchToRatio(state.result.canvas, ratio.w, ratio.h)
+    : state.result.canvas;
 
   releaseOutputIfDistinct();
   state.output = nextOutput;
@@ -466,24 +413,18 @@ function renderResultStage() {
   stage.appendChild(canvas);
 
   const ideal = predictOutputSize(state.corners);
-  // 回転していれば、縮小前の理想サイズも縦横が入れ替わって見えるのが自然。
-  const swapped = state.rotation === 90 || state.rotation === 270;
-  const idealW = swapped ? ideal.height : ideal.width;
-  const idealH = swapped ? ideal.width : ideal.height;
   el("resultMeta").innerHTML =
     `元の写真 ${state.source.width} × ${state.source.height} px → ` +
     `補正後 <strong>${canvas.width} × ${canvas.height} px</strong>` +
     (state.result.limited
-      ? `<br>ブラウザが扱える上限を超えるため、${idealW} × ${idealH} px から縮小しました。`
+      ? `<br>ブラウザが扱える上限を超えるため、${ideal.width} × ${ideal.height} px から縮小しました。`
       : "");
 }
 
 function showResult() {
   el("aspectSelect").value = "auto";
   el("aspectCustom").hidden = true;
-  state.rotation = 0;
-  state.base = state.result.canvas;
-  state.output = state.base;
+  state.output = state.result.canvas;
   renderResultStage();
 
   el("saveStatus").textContent = "";
@@ -503,11 +444,6 @@ function setCustomRatio(w, h) {
   el("aspectCustom").hidden = false;
   el("aspectH").value = "10";
   el("aspectW").value = String(Math.round((w / h) * 100) / 10);
-}
-
-/** 現在適用されている縦横比。プルダウンが「自動」なら実際の出力サイズから取る。 */
-function effectiveRatio() {
-  return selectedRatio() ?? { w: state.base.width, h: state.base.height };
 }
 
 el("aspectSelect").addEventListener("change", () => {
@@ -612,30 +548,6 @@ for (const handle of document.querySelectorAll(".edge-handle")) {
   handle.addEventListener("pointerup", endEdgeDrag);
   handle.addEventListener("pointercancel", endEdgeDrag);
 }
-
-/**
- * 90 度回す。縦横比を指定しているときは、その指定も一緒に入れ替える。
- * （4:3 を指定したまま回すと、中身だけ回って外形が横長のまま残ってしまう。）
- */
-function rotateResult(delta) {
-  state.rotation = (state.rotation + delta + 360) % 360;
-  const ratio = selectedRatio();
-  if (ratio) setCustomRatio(ratio.h, ratio.w);
-  rebuildBase();
-  clearTimeout(aspectInputTimer);
-  applyAspectSelection();
-}
-
-el("rotateLeftBtn").addEventListener("click", () => rotateResult(-90));
-el("rotateRightBtn").addEventListener("click", () => rotateResult(90));
-
-// 中身は回さず、外形の縦横だけを入れ替える（縦の黒板を撮ったときなど）。
-el("swapRatioBtn").addEventListener("click", () => {
-  const ratio = effectiveRatio();
-  setCustomRatio(ratio.h, ratio.w);
-  clearTimeout(aspectInputTimer);
-  applyAspectSelection();
-});
 
 el("readjustBtn").addEventListener("click", () => {
   // 元画像と四隅は保持したまま編集へ戻る（非破壊）。

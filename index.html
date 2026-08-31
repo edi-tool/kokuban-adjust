@@ -410,8 +410,7 @@ lang: ja
         margin-top: 16px;
         text-align: left;
       }
-      .aspect-row label,
-      .aspect-row .field-label {
+      .aspect-row label {
         display: block;
         font-size: 13px;
         font-weight: 600;
@@ -630,23 +629,6 @@ lang: ja
         <p class="aspect-hint">
           画像の上下左右の境界をドラッグしても縦横比を変えられます。
         </p>
-        <div class="aspect-row">
-          <div class="field-label">向きと形</div>
-          <div class="actions-sub">
-            <button type="button" class="btn" id="rotateLeftBtn">
-              ⟲ 左に回転
-            </button>
-            <button type="button" class="btn" id="rotateRightBtn">
-              ⟳ 右に回転
-            </button>
-            <button type="button" class="btn" id="swapRatioBtn">
-              ⇄ 縦横入替
-            </button>
-          </div>
-          <p class="aspect-hint">
-            回転は補正結果をそのまま回すだけなので、画質は落ちません。「縦横入替」は中身を回さずに外形の縦横比だけを入れ替えます。
-          </p>
-        </div>
         <div class="aspect-row">
           <label for="aspectSelect">縦横比</label>
           <select class="aspect-select" id="aspectSelect">
