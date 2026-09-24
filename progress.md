@@ -596,3 +596,8 @@ PR #9〜#11 でさらに先行）、`git merge-base --is-ancestor` で全ブラ�
 - マウス操作の端末（`hover: hover` かつ `pointer: fine`）でだけ、その案内文を表示。
 - カードを上寄せに（画面切替のたびにカード位置が跳ねるのを防止）。サブタイトル 13px。
 - **共通**: 見出しの上に「edi-tool」（ハブへのリンク）、フッターに「← edi-tool ツール一覧」を追加。`--text-sub` を #6b6b6b に濃くし、文字用アクセント `--accent-text: #b35f00` を追加（WCAG AA）。
+
+## 2026-09-24 セッション（第2弾: OGP・改行）
+
+- **OGP**: 共有カード用の `ogp.png`（1200×630、Noto Sans JP で生成）を追加し、`og:image` をファビコンから差し替え、`twitter:card` を `summary_large_image` に。
+- **改行**: body の `word-break: break-all` を `normal` + `overflow-wrap: anywhere` に変更。和文は従来どおり1字単位で折り返し、英単語（License、Word 等）は途中で割らない。
