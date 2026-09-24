@@ -365,11 +365,26 @@ export function createCornerEditorAdapter({
     onChange,
   });
 
+  // scanic は微調整パネルを写真の右上に重ねて表示するが、スマートフォンでは
+  // 右上の角のハンドルがパネルの下に隠れてドラッグできなくなる。
+  // パネル要素（イベントは scanic 側で登録済み）を写真の外、直下へ移す。
+  const nudges = container.querySelector(".scanic-nudges");
+  let nudgeHost = null;
+  if (nudges) {
+    nudgeHost = container.ownerDocument.createElement("div");
+    nudgeHost.className = "nudge-host";
+    nudgeHost.appendChild(nudges);
+    container.after(nudgeHost);
+  }
+
   return {
     getCorners: () => editor.getCorners(),
     // 「元に戻す」「写真全体」など、アプリ側から四隅を差し替えるために使う。
     setCorners: (next) => editor.setCorners(next),
     reset: () => editor.reset(),
-    destroy: () => editor.destroy(),
+    destroy: () => {
+      editor.destroy();
+      nudgeHost?.remove();
+    },
   };
 }
