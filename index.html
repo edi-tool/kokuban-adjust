@@ -15,7 +15,7 @@ lang: ja
     />
     <meta name="theme-color" content="#f8f6f2" />
 
-    <title>黒板補正さん | {{ page.title }}</title>
+    <title>{{ page.title }} | 黒板補正さん</title>
     <meta name="description" content="{{ page.description }}" />
     <meta name="robots" content="index, follow" />
     <link rel="canonical" href="{{ site.url }}{{ site.baseurl }}/" />
@@ -27,7 +27,7 @@ lang: ja
     <link rel="apple-touch-icon" href="icon-192.png" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="黒板補正さん | {{ page.title }}" />
+    <meta property="og:title" content="{{ page.title }} | 黒板補正さん" />
     <meta property="og:description" content="{{ page.description }}" />
     <meta property="og:url" content="{{ site.url }}{{ site.baseurl }}/" />
     <meta
@@ -594,12 +594,50 @@ lang: ja
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "黒板補正さん",
-        "description": "斜めから撮った黒板・ホワイトボードの写真を、高解像度のまま正面から見た長方形に補正するツール。",
-        "applicationCategory": "UtilitiesApplication",
-        "inLanguage": "ja",
-        "isAccessibleForFree": true
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "@id": "https://edi-tool.github.io/kokuban-adjust/#app",
+            "name": "黒板補正さん",
+            "alternateName": "{{ page.title }}",
+            "url": "https://edi-tool.github.io/kokuban-adjust/",
+            "description": "斜めから撮った黒板・ホワイトボードの写真を、高解像度のまま正面から見た長方形に補正するツール。",
+            "applicationCategory": "UtilitiesApplication",
+            "operatingSystem": "Web",
+            "browserRequirements": "Requires JavaScript",
+            "inLanguage": "ja",
+            "isAccessibleForFree": true,
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "JPY"
+            },
+            "image": "https://edi-tool.github.io/kokuban-adjust/ogp.png",
+            "isPartOf": {
+              "@id": "https://edi-tool.github.io/#website"
+            },
+            "publisher": {
+              "@id": "https://edi-tool.github.io/#organization"
+            }
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "edi-tool",
+                "item": "https://edi-tool.github.io/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "黒板補正さん",
+                "item": "https://edi-tool.github.io/kokuban-adjust/"
+              }
+            ]
+          }
+        ]
       }
     </script>
   </head>
