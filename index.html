@@ -32,10 +32,12 @@ lang: ja
     <meta property="og:url" content="{{ site.url }}{{ site.baseurl }}/" />
     <meta
       property="og:image"
-      content="{{ site.url }}{{ site.baseurl }}/favicon.png"
+      content="{{ site.url }}{{ site.baseurl }}/ogp.png"
     />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     <meta property="og:locale" content="ja_JP" />
-    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:card" content="summary_large_image" />
 
     <style>
       /* ===== 共通デザイントークン（事務ツール5種で統一） ===== */
@@ -80,8 +82,9 @@ lang: ja
         line-height: 1.5;
         letter-spacing: -0.4px;
         font-feature-settings: "liga";
-        word-break: break-all;
-        overflow-wrap: break-word;
+        /* 和文は1字ごとに折り返せるので break-all は不要。英単語（License 等）を途中で割らない */
+        word-break: normal;
+        overflow-wrap: anywhere;
         line-break: strict;
 
         display: flex;
