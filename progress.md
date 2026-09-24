@@ -601,3 +601,10 @@ PR #9〜#11 でさらに先行）、`git merge-base --is-ancestor` で全ブラ�
 
 - **OGP**: 共有カード用の `ogp.png`（1200×630、Noto Sans JP で生成）を追加し、`og:image` をファビコンから差し替え、`twitter:card` を `summary_large_image` に。
 - **改行**: body の `word-break: break-all` を `normal` + `overflow-wrap: anywhere` に変更。和文は従来どおり1字単位で折り返し、英単語（License、Word 等）は途中で割らない。
+
+## 2026-09-24 セッション（微調整パネルの重なり修正）
+
+- スマートフォンで scanic の微調整パネル（矢印ボタン）が写真右上に重なり、
+  右上の角をドラッグできない問題を修正。`scanner-adapter.js` でパネル要素を
+  写真枠の直下（`.nudge-host`）へ移し、ボタンを 44×40px に拡大した。
+  390×844 の Playwright で、パネルが写真枠の下に出ることを確認。

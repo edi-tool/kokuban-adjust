@@ -246,6 +246,28 @@ lang: ja
            ため消す。 */
         -webkit-tap-highlight-color: transparent;
       }
+      /* 微調整パネルは写真に重ねず、写真の直下に置く（scanner-adapter.js 参照）。 */
+      .nudge-host {
+        display: flex;
+        justify-content: center;
+        margin-top: 8px;
+        /* scanic の変数は .scanic-corner-editor 上で定義されるため、外に出した
+           パネル用にここでも定義する。 */
+        --scanic-surface: rgba(15, 23, 42, 0.92);
+        --scanic-surface-fg: #e2e8f0;
+        --scanic-surface-radius: 12px;
+        --scanic-accent: #f28c06;
+      }
+      .nudge-host .scanic-nudges {
+        position: static;
+      }
+      /* 写真に重ならなくなった分、指で押しやすい大きさにする。 */
+      .nudge-host .scanic-nudges button {
+        width: 44px;
+        height: 40px;
+        font-size: 18px;
+      }
+
       .stage canvas,
       .stage img {
         max-width: 100%;
