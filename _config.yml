@@ -8,3 +8,10 @@ google_analytics: edi-tool
 show_edit_on_github: false
 
 # 検証用の開発ページ。公開はするが検索には載せない（lab.html 側で noindex 指定）。
+
+# Search Console の所有権確認ファイルを jekyll-sitemap の出力から除外する
+defaults:
+  - scope:
+      path: "googled180bd734463e748.html"
+    values:
+      sitemap: false
