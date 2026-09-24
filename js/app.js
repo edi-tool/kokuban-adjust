@@ -180,6 +180,42 @@ el("pickBtn").addEventListener("click", () => el("fileInput").click());
 el("cameraInput").addEventListener("change", onFileInputChange);
 el("fileInput").addEventListener("change", onFileInputChange);
 
+/*
+ * PC 向け: 開始画面ではドラッグ＆ドロップと貼り付け（Ctrl/⌘+V）でも写真を渡せる。
+ * 編集・結果画面で受け付けると作業中の写真が意図せず差し替わるため、開始画面かつ
+ * 読み込み中でないときに限る。
+ */
+const canAcceptImage = () =>
+  !el("screenStart").hidden && !el("pickBtn").disabled;
+
+const firstImage = (files) =>
+  Array.from(files || []).find((file) => file.type.startsWith("image/"));
+
+// 画面外に落としたときにブラウザが画像を開いてページを離れないよう、常に既定動作を止める。
+window.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  if (canAcceptImage()) document.body.classList.add("is-dragover");
+});
+window.addEventListener("dragleave", (event) => {
+  // 子要素間の移動でも発火するため、ウィンドウの外へ出たときだけ解除する。
+  if (!event.relatedTarget) document.body.classList.remove("is-dragover");
+});
+window.addEventListener("drop", (event) => {
+  event.preventDefault();
+  document.body.classList.remove("is-dragover");
+  if (!canAcceptImage()) return;
+  const file = firstImage(event.dataTransfer?.files);
+  if (file) handleFile(file);
+  else el("startError").textContent = "画像ファイルをドロップしてください。";
+});
+document.addEventListener("paste", (event) => {
+  if (!canAcceptImage()) return;
+  const file = firstImage(event.clipboardData?.files);
+  if (!file) return;
+  event.preventDefault();
+  handleFile(file);
+});
+
 /* ------------------------------------------------------------------- edit */
 
 /**

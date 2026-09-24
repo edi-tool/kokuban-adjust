@@ -44,10 +44,11 @@ lang: ja
         --surface: #fff;
         --border: #e0e0e0;
         --text: #0f0f0f;
-        --text-sub: #757575;
+        --text-sub: #6b6b6b;
         --accent: #f28c06;
         --accent-dark: #d97a00;
         --accent-soft: #fff8f0;
+        --accent-text: #b35f00; /* 文字用のアクセント（白地で AA を満たす濃さ） */
         --danger: #e53935;
       }
       :focus-visible {
@@ -85,7 +86,9 @@ lang: ja
 
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        /* 上寄せ: 中央寄せだと画面を切り替えるたびにカードの位置が上下に跳ねる。
+           他ツールとも揃える。 */
+        justify-content: flex-start;
         align-items: center;
         /* dvh は iOS のアドレスバー伸縮を含んだ高さ。100vh だと画面下が
            ツールバーに隠れ、主ボタンが折り返しの下へ潜ることがある。
@@ -116,6 +119,19 @@ lang: ja
       }
 
       /* Headings */
+      .brand-link {
+        display: inline-block;
+        margin-bottom: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-sub);
+        text-decoration: none;
+        letter-spacing: 0.02em;
+      }
+      .brand-link:hover {
+        color: var(--accent-text);
+        text-decoration: underline;
+      }
       h1 {
         margin-top: 0;
         margin-bottom: 8px;
@@ -124,7 +140,8 @@ lang: ja
         color: var(--text);
       }
       .subtitle {
-        font-size: 12px;
+        font-size: 13px;
+        line-height: 1.6;
         color: var(--text-sub);
         display: block;
         margin-bottom: 24px;
@@ -368,7 +385,7 @@ lang: ja
         font-variant-numeric: tabular-nums;
       }
       .meta strong {
-        color: var(--accent);
+        color: var(--accent-text);
         font-size: 13px;
       }
 
@@ -506,15 +523,43 @@ lang: ja
         color: var(--accent);
       }
 
+      /* PC でのドラッグ＆ドロップ中の表示（開始画面のみ受け付ける） */
+      .container {
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+      }
+      body.is-dragover .container {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(242, 140, 6, 0.25);
+      }
+      .drop-hint {
+        display: none;
+        word-break: normal;
+        font-size: 12px;
+        color: var(--text-sub);
+        margin: 12px 0 0;
+      }
+      /* マウス操作の端末（PC）でだけ案内を出す */
+      @media (hover: hover) and (pointer: fine) {
+        .drop-hint {
+          display: block;
+        }
+      }
+
       /* Footer */
       footer {
         margin-top: 32px;
         font-size: 12px;
         color: var(--text-sub);
         text-align: center;
+        word-break: normal;
       }
       footer a {
         color: var(--text-sub);
+      }
+      footer a:hover {
+        color: var(--accent-text);
       }
 
       [hidden] {
@@ -535,6 +580,7 @@ lang: ja
   </head>
   <body>
     <div class="container">
+      <a class="brand-link" href="https://edi-tool.github.io/">edi-tool</a>
       <h1>黒板補正さん</h1>
       <span class="subtitle"
         >斜めに撮った黒板を、まっすぐに。<br />黒板・ホワイトボードの写真を、正面から撮ったように補正します。元写真の高解像度を生かしたまま保存できます。</span
@@ -559,6 +605,9 @@ lang: ja
           capture="environment"
           hidden
         />
+        <p class="drop-hint">
+          写真をこの画面にドラッグ＆ドロップ、または貼り付け（Ctrl/⌘+V）でも読み込めます。
+        </p>
         <input
           type="file"
           id="fileInput"
@@ -730,7 +779,10 @@ lang: ja
       </noscript>
     </div>
 
-    <footer>&copy; 2026 ISHIKAWA, Natsuki | MIT License</footer>
+    <footer>
+      <a href="https://edi-tool.github.io/">← edi-tool ツール一覧</a> | &copy;
+      2026 ISHIKAWA, Natsuki | MIT License
+    </footer>
 
     <script type="module" src="js/app.js"></script>
   </body>
