@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-25
+
 ### Added
 
 - テスト（`npm test`）と HTML 静的チェック（`npm run check`）、GitHub Actions の CI
