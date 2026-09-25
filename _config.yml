@@ -15,3 +15,16 @@ defaults:
       path: "googled180bd734463e748.html"
     values:
       sitemap: false
+
+# 開発用ファイルを公開ビルドから外す（Pages で CLAUDE.md などが配信されないように）
+exclude:
+  - CLAUDE.md
+  - AGENTS.md
+  - DESIGN.md
+  - progress.md
+  - README.md
+  - CHANGELOG.md
+  - package.json
+  - scripts/
+  - tests/
+  - docs/
