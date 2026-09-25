@@ -1,0 +1,12 @@
+{
+  "name": "kokuban-adjust",
+  "private": true,
+  "description": "斜めから撮った黒板・ホワイトボードの写真を長方形に補正するブラウザツール",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check-static.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
