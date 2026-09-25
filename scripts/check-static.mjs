@@ -33,7 +33,7 @@ export function expandFrontMatter(html) {
   return html.slice(fm[0].length).replace(/\{\{\s*page\.([A-Za-z_]+)\s*\}\}/g, (_, k) => vars[k] ?? '');
 }
 
-export function checkHtml(name, rawHtml, { exists = (p) => existsSync(join(ROOT, p)), ignore = [] } = {}) {
+export function checkHtml(name, rawHtml, { exists = (p) => existsSync(join(ROOT, p)), ignore = [], siteHost = '' } = {}) {
   const html = expandFrontMatter(rawHtml);
   const err = (m, id) => (ignore.includes(id) ? warnings : errors).push(`${name}: ${m}${ignore.includes(id) ? '（package.json で除外中）' : ''}`);
   const warn = (m) => warnings.push(`${name}: ${m}`);
@@ -62,6 +62,7 @@ export function checkHtml(name, rawHtml, { exists = (p) => existsSync(join(ROOT,
     if (/^https?:\/\//.test(ref)) {
       const url = new URL(ref);
       if (url.hostname === 'fonts.googleapis.com') continue; // Google Fonts はスタイルのみ
+      if (siteHost && url.hostname === siteHost) continue; // 自サイト（_config.yml の url）の絶対 URL は外部依存ではない
       if (!ALLOWED_HOSTS.includes(url.hostname)) err(`許可されていない外部ホスト: ${ref}`, 'external-host');
       else if (url.hostname === 'cdn.jsdelivr.net' && !/\/npm\/(@[^/]+\/)?[^/@]+@\d[^/]*\//.test(url.pathname)) {
         err(`CDN のバージョンが固定されていません: ${ref}`, 'cdn-version');
@@ -83,7 +84,13 @@ function main() {
   if (existsSync(join(ROOT, 'package.json'))) {
     ignore = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).checkStatic?.ignore ?? [];
   }
-  for (const f of files) checkHtml(f, readFileSync(join(ROOT, f), 'utf8'), { ignore });
+  // Jekyll の _config.yml に url があれば、そのホストへの絶対 URL は自サイト扱い（404.html など）
+  let siteHost = '';
+  if (existsSync(join(ROOT, '_config.yml'))) {
+    const m = readFileSync(join(ROOT, '_config.yml'), 'utf8').match(/^url:\s*["']?(https?:\/\/[^"'\s]+)/m);
+    if (m) siteHost = new URL(m[1]).hostname;
+  }
+  for (const f of files) checkHtml(f, readFileSync(join(ROOT, f), 'utf8'), { ignore, siteHost });
   for (const w of warnings) console.warn(`警告: ${w}`);
   for (const e of errors) console.error(`エラー: ${e}`);
   console.log(`check-static: ${files.length} ファイル、エラー ${errors.length} 件、警告 ${warnings.length} 件`);
