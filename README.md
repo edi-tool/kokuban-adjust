@@ -1,8 +1,10 @@
-# 黒板・ホワイトボード写真の傾き補正ツール
+# 黒板・ホワイトボード写真の傾き補正ツール（黒板補正さん）
 
 斜めから撮った黒板・ホワイトボードの写真を、正面から撮ったような長方形に補正するツールです。
 
-https://edi-tool.github.io/kokuban-adjust/
+🔗 https://edi-tool.github.io/kokuban-adjust/
+
+![黒板補正さんの画面](docs/screenshot.png)
 
 ## 概要
 
@@ -10,8 +12,7 @@ https://edi-tool.github.io/kokuban-adjust/
 台形のゆがみを取り除いて正面から見た長方形に補正します。
 元写真の高解像度を生かしたまま保存できます。
 
-処理はすべてブラウザ内で完結し、**画像は外部へ送信されません**。
-児童生徒や氏名、授業内容が写り込んでいても、端末の外に出ることはありません。
+処理はすべてブラウザ内で完結し、**画像は外部へ送信されません**（詳しくは「データの扱い」）。
 
 ## 使い方
 
@@ -22,6 +23,13 @@ https://edi-tool.github.io/kokuban-adjust/
 3. 「補正する」
 4. 必要なら縦横比を整える（プリセット / カスタム / 画像の境界をドラッグ）
 5. JPEG（高品質）または PNG（無劣化）で保存
+
+## データの扱い
+
+- 写真はブラウザ内で処理し、**外部へ送信しません**。児童生徒や氏名、授業内容が写り込んでいても、端末の外に出ることはありません。
+- 本体（`index.html`）は外部 CDN を読み込みません。画像処理ライブラリ scanic はリポジトリ内（`lib/`）に同梱しています。
+- 開発用の比較ページ `lab.html` だけは、比較対象として jscanify（cdn.jsdelivr.net）・OpenCV.js（docs.opencv.org）・scanic ML モデル（cdn.jsdelivr.net）を読み込みます。
+- 保存・履歴などの情報をブラウザ（localStorage 等）に残しません。
 
 ## 使用技術
 
@@ -34,17 +42,17 @@ https://edi-tool.github.io/kokuban-adjust/
 ### 1. 高解像度の維持
 
 単に長方形へ変形できればよいのではなく、元写真の解像度を保つことを最重要要件と
-しています。四隅の自動検出は縮小画像（最大辺 1024px）で行いますが、
+しています。四隅の自動検出は縮小画像（最大辺 1600px）で行いますが、
 **透視補正は必ず原寸画像に対して**実行します。検出された四隅は原寸画像の
 座標系へ復元されるため、出力解像度は検出処理の解像度に影響されません。
 
 ```
 元画像 (4032 × 3024)
-  ├─ 検出用コピーのみ縮小 (1024px) → 四隅検出 → 原寸座標へ復元
+  ├─ 検出用コピーのみ縮小 (1600px) → 四隅検出 → 原寸座標へ復元
   └─ 原寸画像に Perspective Transform → 高解像度画像を書き出し
 ```
 
-実測（Chromium、合成の 12MP 画像）:
+実測（Chromium、合成の 12MP 画像。検出解像度が 1024px だった初版時点の値）:
 
 | 入力              | 検出  | 補正  | 出力        |
 | ----------------- | ----- | ----- | ----------- |
@@ -57,6 +65,9 @@ https://edi-tool.github.io/kokuban-adjust/
 透視変換では画素の補間が発生するため、厳密な無劣化ではありません。
 不要な縮小・再圧縮をしない、という方針です。JPEG は品質 0.92 固定、
 PNG は無劣化で書き出します。
+
+検出解像度は初版の 1024px では四隅のずれが報告されたため、1600px に上げています
+（比較結果は `js/scanner-adapter.js` の `DETECT_MAX_DIMENSION` のコメント）。
 
 ### 2. メモリの上限
 
@@ -99,9 +110,15 @@ JPEG で撮影できます。
 ```bash
 python -m http.server 8000   # プレビュー
 npx prettier --write .       # 整形
+npm test                     # テスト（Node.js 22 以上、依存パッケージなし）
+npm run check                # HTML の静的チェック
 ```
 
 ビルド工程はありません。`index.html` をそのまま GitHub Pages が配信します。
+
+- テスト（`tests/`）は四隅の初期値・出力サイズの予測・凸四角形判定と、README に書いたメモリ上限・検出解像度がコードと一致していることを確認します。
+- 変更履歴は [CHANGELOG.md](CHANGELOG.md) を参照してください。
+- 開発方針は [edi-tool 開発原則](https://github.com/edi-tool/.github/blob/main/PRINCIPLES.md) に従います。
 
 ### GitHub Pages の有効化（初回のみ・手動）
 
@@ -135,6 +152,12 @@ npx prettier --write .       # 整形
 - [kzhrknt/awesome-design-md-jp](https://github.com/kzhrknt/awesome-design-md-jp)
   - 本ツールのデザインの参考
 
----
+## 関連ツール
 
-© 2026 ISHIKAWA, Natsuki
+- [edi-tool のツール一覧](https://edi-tool.github.io/)
+
+## ライセンス
+
+MIT License © 2026 ISHIKAWA, Natsuki（[LICENSE](LICENSE)）
+
+同梱の scanic は MIT License です（`lib/LICENSE.scanic`）。
