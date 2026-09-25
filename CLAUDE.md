@@ -8,6 +8,7 @@
 
 - プレビュー: `python -m http.server 8000`
 - 整形: `npx prettier --write .`
+- テスト: `npm test` / HTML 静的チェック: `npm run check`
 
 ビルド工程はない。`index.html` をそのまま GitHub Pages が配信する。
 ローカルプレビューでは Jekyll のフロントマターがページ上部に文字列として
