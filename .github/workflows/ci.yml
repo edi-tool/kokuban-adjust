@@ -1,0 +1,32 @@
+# 静的ツール共通 CI。原本: edi-tool/.github/templates/workflows/ci-static.yml
+# 依存パッケージがないため npm ci は不要。
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: テスト
+        run: npm test
+      - name: HTML 静的チェック
+        run: npm run check
