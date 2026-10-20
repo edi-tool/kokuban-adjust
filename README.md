@@ -35,7 +35,7 @@
 
 - **Frontend**: HTML5, CSS3
 - **Scripting**: Vanilla JavaScript (ES Modules / ビルド工程なし)
-- **画像処理**: [scanic](https://github.com/marquaye/scanic) v1.6.0 (MIT)
+- **画像処理**: [scanic](https://github.com/marquaye/scanic) v1.7.1 (MIT)
 
 ## 仕様について
 

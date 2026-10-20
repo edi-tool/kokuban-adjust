@@ -615,3 +615,10 @@ PR #9〜#11 でさらに先行）、`git merge-base --is-ancestor` で全ブラ�
   右上の角をドラッグできない問題を修正。`scanner-adapter.js` でパネル要素を
   写真枠の直下（`.nudge-host`）へ移し、ボタンを 44×40px に拡大した。
   390×844 の Playwright で、パネルが写真枠の下に出ることを確認。
+
+## 2026-10-20 セッション（scanic v1.7.1 へ更新）
+
+- 同梱の scanic を v1.6.0 → v1.7.1 に更新（`lib/` の3ファイルを npm 配布物 `dist/` と差し替え。旧版は無改変の配布物だったことを照合済み）。API の変更はなく、`js/scanner-adapter.js` は無変更。
+- 取り込んだ主な修正: 大きな写真の透視補正が約3倍遅くなることがある不具合、幅4px未満の画像でのWASM停止、ほぼ無地の画面でノイズを辺として検出する不具合。
+- 検証: `npm test`（6件合格）、`npm run check`（エラー0、lab.html の既存警告1）。ブラウザで 1600×1200 の合成画像に対し classical・ml の両方式で四隅を数px以内で検出、透視補正 1119×679 を出力、3×3px の画像でも停止しないことを確認。
+- 上流の更新確認は editorial-prompts-dev の `docs/upstream-registry.md` に記録している。
