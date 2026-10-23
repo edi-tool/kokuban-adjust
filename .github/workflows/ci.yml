@@ -30,3 +30,39 @@ jobs:
         run: npm test
       - name: HTML 静的チェック
         run: npm run check
+
+  # Dependabot のパッチ更新（x.y.Z）だけ、このワークフローのジョブが全部通ったら自動でマージする。
+  # ほかのワークフローのチェックが未完了・失敗なら見送り、残りは人が判断する（2026-10-23 導入）。
+  dependabot-automerge:
+    needs: [test]
+    if: github.event_name == 'pull_request' && github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      - name: パッチ更新ならマージする
+        if: steps.meta.outputs.update-type == 'version-update:semver-patch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          # ほかのチェック（別ワークフロー・CodeQL など）の完了を最大10分待つ
+          others='[.[] | select(.name != "dependabot-automerge")]'
+          for _ in $(seq 1 30); do
+            pending=$(gh pr checks "$PR_URL" --json name,bucket --jq "$others | map(select(.bucket == \"pending\")) | length" || true)
+            [ "$pending" = "0" ] && break
+            sleep 20
+          done
+          failed=$(gh pr checks "$PR_URL" --json name,bucket --jq "$others | map(select(.bucket != \"pass\" and .bucket != \"skipping\")) | length" || true)
+          if [ "$failed" != "0" ]; then
+            echo "ほかのチェックが未完了か失敗しているため、自動マージを見送ります"
+            exit 0
+          fi
+          if [ "$(gh pr view "$PR_URL" --json state --jq .state)" != "OPEN" ]; then
+            echo "マージ済みのため何もしません"
+            exit 0
+          fi
+          gh pr merge "$PR_URL" --squash
