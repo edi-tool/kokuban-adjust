@@ -1,5 +1,9 @@
 # 進捗: 黒板補正さん（kokuban-adjust）
 
+## 2026-10-30 セッション（コードスキャン指摘の解消）
+
+- CodeQL `js/xss-through-dom`（`js/lab.js`）: 比較ページで画像のファイル名を `innerHTML` に入れていた。見出しは `textContent` で入れるよう変更（本体の app.js は対象外）。
+
 ## 2026-10-21 セッション（エージェント向け規則の一本化）
 
 - `CLAUDE.md` と `AGENTS.md` に規則が別々に書かれ、内容がずれていた（Claude Code は `CLAUDE.md` があると `AGENTS.md` を自動では読まず、Codex は `CLAUDE.md` を読まない）。両方の規則を `AGENTS.md` に統合し、`CLAUDE.md` は `@AGENTS.md` の取り込みだけにした。

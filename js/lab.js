@@ -225,12 +225,14 @@ el("fileInput").addEventListener("change", async (event) => {
     const block = document.createElement("div");
     block.className = "block";
     block.innerHTML = `
-      <h2>${file.name}</h2>
+      <h2></h2>
       <p class="sub">入力 ${source.width} × ${source.height} px
         （${((source.width * source.height) / 1e6).toFixed(1)} MP、
         ファイル ${(file.size / 1048576).toFixed(1)} MB、
         読み込み時の縮小率 ${source.scale.toFixed(3)}） / 処理前 ${memoryNote()}</p>
       <div class="grid"></div>`;
+    // ファイル名は HTML として解釈させない
+    block.querySelector("h2").textContent = file.name;
     el("results").appendChild(block);
     const grid = block.querySelector(".grid");
 
