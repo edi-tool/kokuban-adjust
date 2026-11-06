@@ -36,7 +36,7 @@ function drawOverlay(source, corners, target) {
     ctx[method](p.x * scale, p.y * scale);
   });
   ctx.closePath();
-  ctx.strokeStyle = "#f28c06";
+  ctx.strokeStyle = "#ff6a00";
   ctx.lineWidth = 3;
   ctx.stroke();
   pts.forEach((p) => {
@@ -44,7 +44,7 @@ function drawOverlay(source, corners, target) {
     ctx.arc(p.x * scale, p.y * scale, 5, 0, Math.PI * 2);
     ctx.fillStyle = "#fff";
     ctx.fill();
-    ctx.strokeStyle = "#f28c06";
+    ctx.strokeStyle = "#ff6a00";
     ctx.lineWidth = 2;
     ctx.stroke();
   });

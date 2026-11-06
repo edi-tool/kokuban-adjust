@@ -339,7 +339,7 @@ export function createCornerEditorAdapter({
       size: 170,
       zoom: 3.5,
       margin: 16,
-      crosshairColor: "#f28c06",
+      crosshairColor: "#ff6a00",
       crosshairSize: 24,
       borderWidth: 3,
     },
@@ -355,12 +355,12 @@ export function createCornerEditorAdapter({
     handleHitArea: 48,
     keyboard: true,
     theme: {
-      accent: "#f28c06",
+      accent: "#ff6a00",
       mask: "rgba(15, 15, 15, 0.5)",
       handleSize: 24,
       handleHit: 48,
       handleColor: "#ffffff",
-      handleRingColor: "#f28c06",
+      handleRingColor: "#ff6a00",
     },
     onChange,
   });
