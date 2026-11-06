@@ -644,10 +644,18 @@ footer a[href="https://edi-tool.github.io/"] { display: inline-flex; align-items
 :root { --et-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E"); }
 .et-live { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
-/* edi-tool 共通: ツールの説明（検索で見つけてもらうための本文） */
-.et-about { max-width: 48rem; margin: 3rem auto 0; padding: 1.5rem 1rem 0; border-top: 1px solid var(--border); color: var(--text); font-size: 0.9375rem; line-height: 1.8; text-align: left; }
-.et-about h2 { font-size: 1.0625rem; font-weight: 700; line-height: 1.5; margin: 1.75rem 0 0.5rem; color: var(--text); }
-.et-about h2:first-child { margin-top: 0; }
+/* edi-tool 共通: ツールの説明（検索で見つけてもらうための本文。閉じた開閉パネルに入れる） */
+.et-about { width: min(40rem, calc(100% - 2rem)); margin: 2.5rem auto 0; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; color: var(--text); font-size: 0.9375rem; line-height: 1.8; text-align: left; }
+.et-about > summary { list-style: none; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 16px; cursor: pointer; font-weight: 700; color: var(--text-sub); }
+.et-about > summary::-webkit-details-marker { display: none; }
+.et-about > summary:hover { color: var(--text); }
+.et-about > summary:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.et-about > summary .et-i { flex: none; transition: transform 200ms ease; }
+.et-about[open] > summary .et-i { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .et-about > summary .et-i { transition: none; } }
+.et-about-body { padding: 0 1rem 1rem; }
+.et-about h2 { font-size: 1rem; font-weight: 700; line-height: 1.5; margin: 1.25rem 0 0.25rem; color: var(--text); }
+.et-about-body > h2:first-child { margin-top: 0.25rem; }
 .et-about p, .et-about ol, .et-about dl { margin: 0.25rem 0 0.75rem; color: var(--text-sub); }
 .et-about ol { list-style: decimal; padding-left: 1.5em; }
 .et-about li { margin: 0.125rem 0; }
@@ -911,25 +919,28 @@ footer a[href="https://edi-tool.github.io/"] { display: inline-flex; align-items
       </noscript>
     </div>
 
-    <section class="et-about" aria-labelledby="et-about-h">
-        <h2 id="et-about-h">黒板補正さんでできること</h2>
-        <p>斜めから撮った黒板やホワイトボードの写真の台形のゆがみを取り、正面から撮ったような長方形に補正する無料ツールです。四隅は自動で検出し、ずれていれば指やマウスで調整できます。補正は元の写真の解像度のまま行うので、板書の細かい文字も読みやすく残せます。授業の記録や板書の共有、教材づくりに使えます。</p>
-        <h2>使い方</h2>
-        <ol>
-            <li>黒板の写真を選びます。</li>
-            <li>自動で検出された四隅を確かめ、ずれていればドラッグで合わせます。</li>
-            <li>「補正する」を押し、必要なら縦横比を整えて、JPEG か PNG で保存します。</li>
-        </ol>
-        <h2>よくある質問</h2>
-        <dl>
-            <dt>スマートフォンでも使えますか？</dt>
-            <dd>使えます。スマートフォンで撮った写真をそのまま選び、四隅は指でドラッグして調整できます。</dd>
-            <dt>どの形式で保存できますか？</dt>
-            <dd>高品質の JPEG か、劣化のない PNG を選べます。</dd>
-            <dt>写真はどこかに送られますか？</dt>
-            <dd>送られません。写真はブラウザ内で処理するので、児童生徒や名前が写っていても端末の外には出ません。</dd>
-        </dl>
-    </section>
+    <details class="et-about">
+        <summary>使い方・よくある質問<span class="et-i et-i-chevron-down" aria-hidden="true"></span></summary>
+        <div class="et-about-body">
+            <h2>黒板補正さんでできること</h2>
+            <p>斜めから撮った黒板やホワイトボードの写真の台形のゆがみを取り、正面から撮ったような長方形に補正する無料ツールです。四隅は自動で検出し、ずれていれば指やマウスで調整できます。補正は元の写真の解像度のまま行うので、板書の細かい文字も読みやすく残せます。授業の記録や板書の共有、教材づくりに使えます。</p>
+            <h2>使い方</h2>
+            <ol>
+                <li>黒板の写真を選びます。</li>
+                <li>自動で検出された四隅を確かめ、ずれていればドラッグで合わせます。</li>
+                <li>「補正する」を押し、必要なら縦横比を整えて、JPEG か PNG で保存します。</li>
+            </ol>
+            <h2>よくある質問</h2>
+            <dl>
+                <dt>スマートフォンでも使えますか？</dt>
+                <dd>使えます。スマートフォンで撮った写真をそのまま選び、四隅は指でドラッグして調整できます。</dd>
+                <dt>どの形式で保存できますか？</dt>
+                <dd>高品質の JPEG か、劣化のない PNG を選べます。</dd>
+                <dt>写真はどこかに送られますか？</dt>
+                <dd>送られません。写真はブラウザ内で処理するので、児童生徒や名前が写っていても端末の外には出ません。</dd>
+            </dl>
+        </div>
+    </details>
 
     <footer>
       <a href="https://edi-tool.github.io/"><span class="et-i et-i-chevron-left" aria-hidden="true"></span>edi-tool ツール一覧</a> | &copy;
