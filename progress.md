@@ -9,6 +9,7 @@
 - 文字記号（⚠・✓・🔒・▼・↓・←・→・×）を、共通の線のアイコン（`data-icon` 属性と `.et-i`、CSS マスク）に置き換えた。
 - `lab.html` に `meta description` を追加（check-static の警告を解消）。`ogp.png` を新しい配色に。
 - ファビコンを共通の形（蛍光オレンジの角丸＋ツールの線アイコン）に。`favicon.svg`・`favicon.ico`（16/32/48）・`favicon.png`（192）・`apple-touch-icon.png`（180）を置き、`<head>` の指定を3行にそろえた（生成はハブの `scripts/ogp/favicon.js`）。 `manifest.json` の `icon-192.png`・`icon-512.png` も作り直し、背景色・テーマ色を #f5f5f7 に。
+- ブックマーク名（`<title>`・`og:title`）を「短い用途｜ツール名」にそろえ、「板書写真の補正｜黒板補正さん」にした。登録済みのブックマーク名は自動では変わらない。
 
 ## 2026-10-30 セッション（コードスキャン指摘の解消）
 
