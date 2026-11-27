@@ -158,6 +158,8 @@ npm run check                # HTML の静的チェック
 
 ## ライセンス
 
-MIT License © 2026 ISHIKAWA, Natsuki（[LICENSE](LICENSE)）
+Apache License 2.0 © 2026 ISHIKAWA, Natsuki（[LICENSE](LICENSE)）
+
+独自のマニュアル・解説記事は [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)、名称・ロゴは All Rights Reserved とします。第三者の著作物には各ライセンスが適用されます。開発元は [NOTICE](NOTICE) を参照してください。
 
 同梱の scanic は MIT License です（`lib/LICENSE.scanic`）。
