@@ -1,3 +1,10 @@
+/*
+SPDX-License-Identifier: Apache-2.0
+Copyright 2026 ISHIKAWA, Natsuki
+Project: edi-tool
+Source: https://github.com/edi-tool
+Applies to original code; third-party materials and separately licensed content retain their terms.
+*/
 /**
  * 画像の読み込み。EXIF Orientation の適用、非対応形式の判定、
  * メモリ上限の適用をここに集約する。
